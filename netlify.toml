@@ -1,0 +1,17 @@
+[build]
+  base = "web"
+  command = "npm run build"
+  publish = "dist"
+
+# The game is loaded in an iframe by chain.wtf and previewed in the jam gallery,
+# so framing must stay open — never send X-Frame-Options here.
+[[headers]]
+  for = "/*"
+  [headers.values]
+    Content-Security-Policy = "frame-ancestors *"
+
+[[headers]]
+  for = "/game.manifest.json"
+  [headers.values]
+    Access-Control-Allow-Origin = "*"
+    Cache-Control = "public, max-age=60"

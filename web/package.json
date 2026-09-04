@@ -8,7 +8,10 @@
     "build": "tsc -b && vite build",
     "preview": "vite preview",
     "test": "vitest run",
-    "test:watch": "vitest"
+    "test:watch": "vitest",
+    "e2e": "vite-node scripts/e2e.ts",
+    "compile": "node ../scripts/compile-check.mjs",
+    "sync": "../scripts/sync-contract.sh"
   },
   "dependencies": {
     "penpal": "^7.0.4",

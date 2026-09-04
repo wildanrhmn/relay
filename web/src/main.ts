@@ -221,6 +221,14 @@ function syntheticTrace(build: Build, depth: number): boolean[][] {
   return depth >= build.length ? build.map((k) => Array<boolean>(k).fill(true)) : trace;
 }
 
+/** Chain errors arrive as multi-line dumps with raw calldata; keep the banner human. */
+function shortError(error: unknown): string {
+  const raw = error instanceof Error ? error.message : String(error);
+  const firstLine = raw.split('\n').find((line) => line.trim().length > 0)?.trim() ?? 'Round failed';
+  const cleaned = firstLine.replace(/0x[0-9a-fA-F]{16,}/g, '0x…');
+  return cleaned.length > 92 ? `${cleaned.slice(0, 92)}…` : cleaned;
+}
+
 async function runRound(): Promise<void> {
   if (running || !host || !isRunnable(editor) || !view.ready) return;
 
@@ -258,7 +266,8 @@ async function runRound(): Promise<void> {
       verdict('Gate 1 held. Nothing got through.', 'loss');
     }
   } catch (error) {
-    verdict(error instanceof Error ? error.message : 'Round failed', 'loss');
+    console.error('[apparatus] round failed', error);
+    verdict(shortError(error), 'loss');
     auto = false;
     el('auto').setAttribute('aria-pressed', 'false');
   } finally {
