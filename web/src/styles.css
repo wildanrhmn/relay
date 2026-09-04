@@ -538,6 +538,29 @@ button { touch-action: manipulation; -webkit-tap-highlight-color: transparent; }
   .shell { grid-template-areas: 'mast mast bal' 'stage stage stage' 'meter meter meter' 'amount quick cta' 'notice notice notice'; grid-template-rows: auto minmax(0, 1fr) auto auto auto; }
 }
 
+/*
+ * Cartridge mode: the jam gallery renders the live game inside a 245x275 (or
+ * 178x198) frame. At that size only the stage is worth showing, full-bleed.
+ */
+@media (max-width: 340px), (max-height: 340px) {
+  .shell {
+    display: block;
+    height: 100dvh;
+    padding: 0;
+    overflow: hidden;
+    background: #08080b;
+  }
+  .sidebar, .meter, .stage-top, .verdict { display: none !important; }
+  .stage-col { display: block; height: 100%; }
+  .stage { height: 100%; border-radius: 0; box-shadow: none; }
+  #chain-jam-badge {
+    transform: scale(0.62) !important;
+    transform-origin: bottom right;
+    right: 6px !important;
+    bottom: 6px !important;
+  }
+}
+
 @media (prefers-reduced-motion: reduce) {
   .verdict, .cell, .preset, .cta, .quick button, .toggle { transition: none; }
 }

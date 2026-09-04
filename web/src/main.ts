@@ -414,6 +414,40 @@ const PENDING_VIEW: HostView = {
   maxWagerFor: () => null,
 };
 
+/**
+ * Attract loop for the gallery cartridge: with no host and a frame too small
+ * for any controls, keep Volt running rounds so the miniature is alive. The
+ * jam widget skips metrics inside iframes, so this inflates nothing.
+ */
+function startAttractLoop(): void {
+  if (!view.demo) return;
+  const tiny = window.matchMedia('(max-width: 340px), (max-height: 340px)');
+  const presets = PRESETS.map((p) => p.gates);
+  let i = 0;
+  let timer: number | undefined;
+
+  const tick = () => {
+    if (!tiny.matches || running || !stage || !host) return;
+    editor.gates = [...presets[i++ % presets.length]];
+    setWager(1_000_000_000_000_000_000n);
+    render();
+    stage.clearRound();
+    void runRound();
+  };
+  const sync = () => {
+    if (tiny.matches && timer === undefined) {
+      sound.muted = true;
+      timer = window.setInterval(() => { if (!running) tick(); }, 5200);
+      window.setTimeout(tick, 900);
+    } else if (!tiny.matches && timer !== undefined) {
+      window.clearInterval(timer);
+      timer = undefined;
+    }
+  };
+  tiny.addEventListener('change', sync);
+  sync();
+}
+
 function boot(): void {
   // Paint the apparatus immediately: probing for the host takes up to 1.5s and
   // the standalone URL must not open on an empty frame.
@@ -437,6 +471,7 @@ function boot(): void {
       }
       if (!running) render();
     });
+    startAttractLoop();
   });
 }
 
