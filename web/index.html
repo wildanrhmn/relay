@@ -29,6 +29,7 @@
         <div class="field">
           <label class="field-label" for="wager">Bet amount</label>
           <div class="amount">
+            <img class="coin" src="/assets/chusd.webp" width="22" height="22" alt="" />
             <input id="wager" name="wager" inputmode="decimal" autocomplete="off" spellcheck="false" value="1" />
             <span class="amount-sym" id="symbol">chUSD</span>
           </div>
@@ -59,7 +60,7 @@
         <div class="foot">
           <div class="balance-row">
             <span>Balance</span>
-            <b class="readout"><span id="balance">—</span></b>
+            <b class="readout balance-value"><img class="coin" src="/assets/chusd.webp" width="18" height="18" alt="" /><span id="balance">—</span></b>
           </div>
           <button id="run" class="cta" type="button">Run</button>
           <div class="toggles">
@@ -73,7 +74,6 @@
       <main class="stage-col">
         <div class="card stage">
           <canvas id="stage" aria-label="The apparatus"></canvas>
-          <div id="labels" class="label-layer" aria-hidden="true"></div>
           <div class="stage-top">
             <span class="stage-caption" id="caption">Build your machine, then send the current through it.</span>
           </div>

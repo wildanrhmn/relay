@@ -159,6 +159,10 @@ button { touch-action: manipulation; -webkit-tap-highlight-color: transparent; }
 
 .amount-sym { font: 500 11px/1 var(--font-ui); color: var(--ink-mute); }
 
+.coin { flex: 0 0 auto; display: block; border-radius: 50%; }
+.balance-value { display: inline-flex; align-items: center; gap: 6px; }
+.verdict .coin { display: inline-block; vertical-align: -3px; margin-right: 6px; }
+
 .quick { display: grid; grid-template-columns: repeat(4, 1fr); gap: 6px; }
 
 .quick button,
@@ -289,30 +293,6 @@ button { touch-action: manipulation; -webkit-tap-highlight-color: transparent; }
 }
 
 #stage { display: block; width: 100%; height: 100%; }
-
-.label-layer { position: absolute; inset: 0; pointer-events: none; }
-
-.gate-label {
-  position: absolute;
-  top: 0; left: 0;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 2px;
-  padding: 6px 10px;
-  border-radius: 8px;
-  background: rgba(8, 8, 11, 0.86);
-  box-shadow: 0 0 0 1px #000, inset 0 1px 0 rgba(255, 255, 255, 0.12);
-  transform-origin: 50% 100%;
-  white-space: nowrap;
-}
-
-.gate-label b { font: 700 13px/1 var(--font-readout); font-variant-numeric: tabular-nums; color: var(--ink-dim); }
-.gate-label span { font: 500 9px/1 var(--font-ui); letter-spacing: 0.06em; text-transform: uppercase; color: var(--ink-mute); }
-.gate-label.is-cleared b { color: var(--brass); }
-.gate-label.is-failed b { color: var(--loss); }
-.gate-label.is-failed { box-shadow: 0 0 0 1px var(--loss); }
-.gate-label.is-dim { opacity: 0.3 !important; }
 
 .stage-top {
   position: absolute;

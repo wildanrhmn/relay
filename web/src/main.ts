@@ -70,21 +70,9 @@ function onStageEvent(event: StageEvent): void {
   }
 }
 
-/** WebGL corridor when the device can render it, flat canvas stage otherwise. */
 async function createStage(): Promise<StageLike> {
-  const probe = document.createElement('canvas');
-  const hasWebGL = Boolean(probe.getContext('webgl2') ?? probe.getContext('webgl'));
-
-  if (hasWebGL) {
-    try {
-      const { Scene3D } = await import('./game/scene3d');
-      return new Scene3D(canvas, onStageEvent, el('labels'));
-    } catch (error) {
-      console.warn('[apparatus] 3D stage unavailable, using 2D fallback', error);
-    }
-  }
-  const { Stage } = await import('./game/stage');
-  return new Stage(canvas, onStageEvent);
+  const { MascotStage } = await import('./game/mascot');
+  return new MascotStage(canvas, onStageEvent);
 }
 
 function formatUnits(value: bigint, decimals: number, places = 2): string {
