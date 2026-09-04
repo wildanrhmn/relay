@@ -3,3 +3,6 @@ dist/
 sdk/
 .DS_Store
 *.log
+
+# stray local captures
+*.png
