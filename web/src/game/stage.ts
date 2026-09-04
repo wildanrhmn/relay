@@ -1,9 +1,4 @@
-export type StageEvent =
-  | { type: 'charge' }
-  | { type: 'lane'; live: boolean }
-  | { type: 'gate'; index: number }
-  | { type: 'failed'; index: number }
-  | { type: 'won'; gates: number };
+import type { StageEvent, StageLike } from './stage-api';
 
 const COLORS = {
   bg: '#08090d',
@@ -25,7 +20,7 @@ const END_MS = 560;
 
 type Spark = { x: number; y: number; vx: number; vy: number; life: number; hue: 'dead' | 'live' };
 
-export class Stage {
+export class Stage implements StageLike {
   private ctx: CanvasRenderingContext2D;
   private raf = 0;
   private width = 0;
@@ -60,7 +55,7 @@ export class Stage {
     this.hover = index;
   }
 
-  gateAt(x: number): number {
+  gateAt(x: number, _y: number): number {
     const layout = this.layout();
     for (let i = 0; i < layout.length; i++) {
       if (x >= layout[i].x - 8 && x <= layout[i].x + layout[i].w + 8) return i;

@@ -10,51 +10,67 @@
   </head>
   <body>
     <div id="app">
-      <header class="topbar">
-        <div class="brand">
-          <span class="mark"></span>
-          <span>APPARATUS</span>
+      <aside class="sidebar">
+        <div class="brand"><span class="mark"></span><span>APPARATUS</span></div>
+
+        <div class="field">
+          <span class="field-label">Bet Amount</span>
+          <div class="amount">
+            <input id="wager" inputmode="decimal" value="1" aria-label="Bet amount" />
+            <span class="amount-sym" id="symbol">chUSD</span>
+          </div>
+          <div class="quick">
+            <button type="button" data-bet="quarter">1/4</button>
+            <button type="button" data-bet="half">1/2</button>
+            <button type="button" data-bet="double">2x</button>
+            <button type="button" data-bet="max">Max</button>
+          </div>
         </div>
-        <div class="balance">
-          <span id="balance">—</span>
-          <span class="symbol" id="symbol">chUSD</span>
+
+        <div class="field">
+          <span class="field-label">Build</span>
+          <div class="presets" id="presets"></div>
         </div>
-      </header>
 
-      <p class="rule">Spend all twelve wires. A gate opens if <em>any</em> of its wires survive. You are paid for how far the current gets.</p>
+        <div class="field">
+          <span class="field-label">Wires per gate<b class="pool-tag" id="pool">0 left</b></span>
+          <div id="gateBar" class="gate-bar"></div>
+        </div>
 
-      <div class="stage-wrap">
-        <canvas id="stage"></canvas>
-        <div id="verdict" class="verdict"></div>
-        <div id="demoBadge" class="demo-badge" hidden>DEMO</div>
-      </div>
-
-      <div id="gateBar" class="gate-bar"></div>
-
-      <section class="panel">
-        <div class="presets" id="presets"></div>
         <div class="readout">
-          <div><span>WIRES LEFT</span><b id="pool">0</b></div>
-          <div><span>TOP PAY</span><b id="top">—</b></div>
-          <div><span>ANY PAY</span><b id="hit">—</b></div>
+          <div><span>Top pay</span><b id="top">—</b></div>
+          <div><span>Any pay</span><b id="hit">—</b></div>
           <div><span>RTP</span><b>96.00%</b></div>
         </div>
-        <div class="paytable-scroll"><div class="paytable" id="paytable"></div></div>
-      </section>
 
-      <footer class="betbar">
-        <div class="amount">
-          <button type="button" data-bet="half" title="Halve">½</button>
-          <input id="wager" inputmode="decimal" value="1" aria-label="Bet amount" />
-          <button type="button" data-bet="double" title="Double">2×</button>
-          <button type="button" data-bet="max" title="Max">MAX</button>
+        <div class="balance-row">
+          <span>Balance</span>
+          <b><span id="balance">—</span></b>
         </div>
-        <button id="run" class="run">RUN</button>
-        <button id="auto" class="ghost" aria-pressed="false">AUTO</button>
-        <button id="mute" class="ghost" aria-pressed="false" title="Sound">♪</button>
-      </footer>
 
-      <div id="notice" class="notice" hidden></div>
+        <button id="run" class="run">RUN</button>
+
+        <div class="toggles">
+          <button id="auto" class="ghost" aria-pressed="false">AUTO</button>
+          <button id="mute" class="ghost" aria-pressed="false" title="Sound">SOUND</button>
+        </div>
+
+        <div id="notice" class="notice" hidden></div>
+      </aside>
+
+      <main class="stage-col">
+        <div class="history" id="history"></div>
+
+        <div class="stage-wrap">
+          <canvas id="stage"></canvas>
+          <div class="hud-pill">SPEND 12 WIRES · ANY LIVE WIRE OPENS A GATE</div>
+          <div id="verdict" class="verdict"></div>
+          <div id="demoBadge" class="demo-badge" hidden>DEMO</div>
+          <div class="stage-vignette" aria-hidden="true"></div>
+        </div>
+
+        <div class="paytable-scroll"><div class="paytable" id="paytable"></div></div>
+      </main>
     </div>
 
     <script type="module" src="/src/main.ts"></script>

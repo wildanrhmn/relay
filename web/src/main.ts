@@ -1,5 +1,6 @@
 import {
   MAX_LANES,
+  MAX_TIERS,
   WAD,
   formatMultiplier,
   maxMultiplierWad,
@@ -9,7 +10,7 @@ import {
 } from './lib/apparatus';
 import { PRESETS, addGate, addWire, asBuild, createEditor, isRunnable, pool, removeWire } from './game/build';
 import { Sound } from './game/sound';
-import { Stage, type StageEvent } from './game/stage';
+import type { StageEvent, StageLike } from './game/stage-api';
 import { createDemoHost } from './host/demo';
 import { connectLiveHost } from './host/live';
 import type { GameHost, HostView, RoundView } from './host/types';
@@ -19,14 +20,16 @@ const el = <T extends HTMLElement>(id: string) => document.getElementById(id) as
 const editor = createEditor();
 const sound = new Sound();
 
-let host: GameHost;
+let host: GameHost | undefined;
+let stage: StageLike | undefined;
 let view: HostView;
 let running = false;
 let auto = false;
 let clearedNotes = 0;
+let lastDepth = -1;
+const history: { multWad: bigint; win: boolean }[] = [];
 
 const canvas = el<HTMLCanvasElement>('stage');
-const stage = new Stage(canvas, onStageEvent);
 
 function onStageEvent(event: StageEvent): void {
   switch (event.type) {
@@ -35,8 +38,7 @@ function onStageEvent(event: StageEvent): void {
       sound.charge();
       break;
     case 'lane':
-      if (event.live) sound.laneLive();
-      else sound.laneDead();
+      event.live ? sound.laneLive() : sound.laneDead();
       break;
     case 'gate':
       sound.gateCleared(clearedNotes++);
@@ -50,23 +52,36 @@ function onStageEvent(event: StageEvent): void {
   }
 }
 
+/** WebGL corridor when the device can render it, flat canvas stage otherwise. */
+async function createStage(): Promise<StageLike> {
+  const probe = document.createElement('canvas');
+  const hasWebGL = Boolean(probe.getContext('webgl2') ?? probe.getContext('webgl'));
+
+  if (hasWebGL) {
+    try {
+      const { Scene3D } = await import('./game/scene3d');
+      return new Scene3D(canvas, onStageEvent);
+    } catch (error) {
+      console.warn('[apparatus] 3D stage unavailable, using 2D fallback', error);
+    }
+  }
+  const { Stage } = await import('./game/stage');
+  return new Stage(canvas, onStageEvent);
+}
+
 function formatUnits(value: bigint, decimals: number, places = 2): string {
   const base = 10n ** BigInt(decimals);
-  const whole = value / base;
   const frac = ((value % base) * 10n ** BigInt(places)) / base;
-  return `${whole.toLocaleString('en-US')}.${frac.toString().padStart(places, '0')}`;
+  return `${(value / base).toLocaleString('en-US')}.${frac.toString().padStart(places, '0')}`;
 }
 
 function parseUnits(text: string, decimals: number): bigint {
-  const cleaned = text.replace(/[^0-9.]/g, '');
-  const [whole = '0', frac = ''] = cleaned.split('.');
+  const [whole = '0', frac = ''] = text.replace(/[^0-9.]/g, '').split('.');
   const padded = (frac + '0'.repeat(decimals)).slice(0, decimals);
   return BigInt(whole || '0') * 10n ** BigInt(decimals) + BigInt(padded || '0');
 }
 
-function currentWager(): bigint {
-  return parseUnits(el<HTMLInputElement>('wager').value || '0', view.decimals);
-}
+const currentWager = () => parseUnits(el<HTMLInputElement>('wager').value || '0', view.decimals);
 
 function setWager(value: bigint): void {
   el<HTMLInputElement>('wager').value = formatUnits(value < 0n ? 0n : value, view.decimals);
@@ -75,9 +90,8 @@ function setWager(value: bigint): void {
 /** The largest bet the platform will accept for this build right now. */
 function wagerCeiling(build: Build): bigint {
   const limit = view.maxWagerFor(build);
-  const balance = view.balance;
-  if (limit === null) return balance;
-  return limit < balance ? limit : balance;
+  if (limit === null) return view.balance;
+  return limit < view.balance ? limit : view.balance;
 }
 
 function renderGateBar(): void {
@@ -91,10 +105,9 @@ function renderGateBar(): void {
     const up = document.createElement('button');
     up.type = 'button';
     up.textContent = '+';
+    up.title = `Add a wire to gate ${index + 1}`;
     up.disabled = running || pool(editor) <= 0 || lanes >= MAX_LANES;
-    up.addEventListener('click', () => {
-      if (addWire(editor, index)) render();
-    });
+    up.addEventListener('click', () => addWire(editor, index) && render());
 
     const count = document.createElement('span');
     count.className = 'gate-count';
@@ -103,10 +116,9 @@ function renderGateBar(): void {
     const down = document.createElement('button');
     down.type = 'button';
     down.textContent = '−';
+    down.title = `Remove a wire from gate ${index + 1}`;
     down.disabled = running;
-    down.addEventListener('click', () => {
-      if (removeWire(editor, index)) render();
-    });
+    down.addEventListener('click', () => removeWire(editor, index) && render());
 
     cell.append(up, count, down);
     bar.append(cell);
@@ -116,29 +128,35 @@ function renderGateBar(): void {
   add.type = 'button';
   add.className = 'add-gate';
   add.textContent = '+ GATE';
-  add.disabled = running || pool(editor) <= 0 || editor.gates.length >= 12;
-  add.addEventListener('click', () => {
-    if (addGate(editor)) render();
-  });
+  add.disabled = running || pool(editor) <= 0 || editor.gates.length >= MAX_TIERS;
+  add.addEventListener('click', () => addGate(editor) && render());
   bar.append(add);
 }
 
 function renderPresets(): void {
   const wrap = el('presets');
-  if (wrap.childElementCount) return;
+  const same = (a: number[], b: number[]) => a.length === b.length && a.every((k, i) => k === b[i]);
 
-  for (const preset of PRESETS) {
-    const button = document.createElement('button');
-    button.type = 'button';
-    button.className = 'preset';
-    button.innerHTML = `<b>${preset.name}</b><span>${preset.blurb}</span>`;
-    button.addEventListener('click', () => {
-      if (running) return;
-      editor.gates = [...preset.gates];
-      sound.unlock();
-      render();
-    });
-    wrap.append(button);
+  if (!wrap.childElementCount) {
+    for (const preset of PRESETS) {
+      const button = document.createElement('button');
+      button.type = 'button';
+      button.className = 'preset';
+      button.dataset.preset = preset.name;
+      button.innerHTML = `<b>${preset.name}</b><span>${preset.blurb}</span>`;
+      button.addEventListener('click', () => {
+        if (running) return;
+        editor.gates = [...preset.gates];
+        sound.unlock();
+        render();
+      });
+      wrap.append(button);
+    }
+  }
+
+  for (const button of wrap.querySelectorAll<HTMLButtonElement>('.preset')) {
+    const preset = PRESETS.find((p) => p.name === button.dataset.preset);
+    button.setAttribute('aria-pressed', String(Boolean(preset && same(preset.gates, editor.gates))));
   }
 }
 
@@ -147,29 +165,45 @@ function renderPaytable(): void {
   wrap.innerHTML = '';
 
   if (!isRunnable(editor)) {
-    wrap.innerHTML = `<div class="paytable-empty">Spend all twelve wires to arm the apparatus.</div>`;
+    wrap.innerHTML = '<div class="paytable-empty">Spend all twelve wires to arm the apparatus.</div>';
     return;
   }
 
-  const build = asBuild(editor);
-  for (const row of paytable(build)) {
+  for (const row of paytable(asBuild(editor))) {
     const chance = (Number(row.exactNum) / 4096) * 100;
     const cell = document.createElement('div');
     cell.className = 'pay-cell';
     if (row.multWad > WAD) cell.classList.add('pay-win');
-    cell.innerHTML = `<b>${formatMultiplier(row.multWad)}</b><span>${row.depth} gate${row.depth > 1 ? 's' : ''}</span><i>${chance.toFixed(chance < 1 ? 2 : 1)}%</i>`;
+    if (row.depth === lastDepth) cell.classList.add('pay-reached');
+    cell.innerHTML =
+      `<b>${formatMultiplier(row.multWad)}</b>` +
+      `<span>${row.depth} gate${row.depth > 1 ? 's' : ''}</span>` +
+      `<i>${chance.toFixed(chance < 1 ? 2 : 1)}%</i>`;
     wrap.append(cell);
   }
 }
 
+function renderHistory(): void {
+  const wrap = el('history');
+  wrap.innerHTML = '';
+  for (const entry of history.slice(-7)) {
+    const chip = document.createElement('div');
+    chip.className = `hist-chip${entry.win ? ' hist-win' : ''}`;
+    chip.textContent = formatMultiplier(entry.multWad);
+    wrap.append(chip);
+  }
+}
+
 function render(): void {
-  stage.setBuild(editor.gates);
+  stage?.setBuild(editor.gates);
   renderGateBar();
   renderPresets();
   renderPaytable();
+  renderHistory();
 
   const runnable = isRunnable(editor);
-  el('pool').textContent = String(pool(editor));
+  const left = pool(editor);
+  el('pool').textContent = `${left} left`;
   el('top').textContent = runnable ? formatMultiplier(maxMultiplierWad(asBuild(editor))) : '—';
   el('hit').textContent = runnable
     ? `${((Number(paytable(asBuild(editor))[0].reachNum) / 4096) * 100).toFixed(1)}%`
@@ -181,7 +215,7 @@ function render(): void {
 
   const run = el<HTMLButtonElement>('run');
   run.disabled = running || !runnable || !view.ready;
-  run.textContent = running ? '···' : 'RUN';
+  run.textContent = running ? '· · ·' : 'RUN';
 
   const notice = el('notice');
   const needsWallet = view.resolved && !view.demo && !view.ready;
@@ -200,7 +234,7 @@ function waitForSettled(key: string): Promise<RoundView> {
   if (existing) return Promise.resolve(existing);
 
   return new Promise((resolve) => {
-    const stop = host.subscribe((next) => {
+    const stop = host!.subscribe((next) => {
       const round = next.rounds.find((item) => item.key === key && item.settled);
       if (round) {
         stop();
@@ -212,13 +246,14 @@ function waitForSettled(key: string): Promise<RoundView> {
 
 /** Fallback trace when the host does not expose the raw VRF word. */
 function syntheticTrace(build: Build, depth: number): boolean[][] {
+  if (depth >= build.length) return build.map((k) => Array<boolean>(k).fill(true));
   const trace: boolean[][] = [];
   for (let i = 0; i <= Math.min(depth, build.length - 1); i++) {
     const lanes = Array<boolean>(build[i]).fill(false);
     if (i < depth) lanes[Math.floor(Math.random() * lanes.length)] = true;
     trace.push(lanes);
   }
-  return depth >= build.length ? build.map((k) => Array<boolean>(k).fill(true)) : trace;
+  return trace;
 }
 
 /** Chain errors arrive as multi-line dumps with raw calldata; keep the banner human. */
@@ -230,7 +265,7 @@ function shortError(error: unknown): string {
 }
 
 async function runRound(): Promise<void> {
-  if (running || !host || !isRunnable(editor) || !view.ready) return;
+  if (running || !host || !stage || !isRunnable(editor) || !view.ready) return;
 
   const build = asBuild(editor);
   const wager = currentWager();
@@ -238,12 +273,13 @@ async function runRound(): Promise<void> {
 
   const ceiling = wagerCeiling(build);
   if (wager > ceiling) {
-    verdict('Bet above the house limit for this build', 'loss');
+    verdict('Bet is above the house limit for this build', 'loss');
     setWager(ceiling);
     return;
   }
 
   running = true;
+  lastDepth = -1;
   verdict('', 'idle');
   render();
 
@@ -258,10 +294,14 @@ async function runRound(): Promise<void> {
     await host.reveal(key);
 
     const payout = round.payout ?? 0n;
+    const multWad = (payout * WAD) / wager;
+    lastDepth = depth;
+    history.push({ multWad, win: payout > wager });
+
     if (payout > wager) {
-      verdict(`+${formatUnits(payout - wager, view.decimals)} · ${formatMultiplier((payout * WAD) / wager)}`, 'win');
+      verdict(`+${formatUnits(payout - wager, view.decimals)}  ·  ${formatMultiplier(multWad)}`, 'win');
     } else if (payout > 0n) {
-      verdict(`${formatMultiplier((payout * WAD) / wager)} · ${depth} of ${build.length}`, 'loss');
+      verdict(`${formatMultiplier(multWad)}  ·  ${depth} of ${build.length} gates`, 'loss');
     } else {
       verdict('Gate 1 held. Nothing got through.', 'loss');
     }
@@ -275,17 +315,13 @@ async function runRound(): Promise<void> {
     render();
   }
 
-  if (auto) {
-    setTimeout(() => {
-      if (auto && !running) void runRound();
-    }, 700);
-  }
+  if (auto) setTimeout(() => auto && !running && void runRound(), 750);
 }
 
 function wireControls(): void {
   el('run').addEventListener('click', () => {
     sound.unlock();
-    stage.clearRound();
+    stage?.clearRound();
     void runRound();
   });
 
@@ -298,35 +334,41 @@ function wireControls(): void {
 
   el('mute').addEventListener('click', () => {
     sound.muted = !sound.muted;
-    el('mute').setAttribute('aria-pressed', String(sound.muted));
-    el('mute').textContent = sound.muted ? '♪̸' : '♪';
+    el('mute').setAttribute('aria-pressed', String(!sound.muted));
+    el('mute').textContent = sound.muted ? 'MUTED' : 'SOUND';
   });
 
   for (const button of document.querySelectorAll<HTMLButtonElement>('[data-bet]')) {
     button.addEventListener('click', () => {
-      const mode = button.dataset.bet;
       const current = currentWager();
+      const mode = button.dataset.bet;
+      if (mode === 'quarter') setWager(current / 4n);
       if (mode === 'half') setWager(current / 2n);
       if (mode === 'double') setWager(current * 2n);
       if (mode === 'max') setWager(wagerCeiling(asBuild(editor)));
     });
   }
 
+  const localPoint = (event: MouseEvent) => {
+    const rect = canvas.getBoundingClientRect();
+    return { x: event.clientX - rect.left, y: event.clientY - rect.top };
+  };
+
   canvas.addEventListener('mousemove', (event) => {
-    const rect = canvas.getBoundingClientRect();
-    stage.setHover(running ? -1 : stage.gateAt(event.clientX - rect.left));
+    const { x, y } = localPoint(event);
+    stage?.setHover(running ? -1 : (stage?.gateAt(x, y) ?? -1));
   });
-  canvas.addEventListener('mouseleave', () => stage.setHover(-1));
+  canvas.addEventListener('mouseleave', () => stage?.setHover(-1));
   canvas.addEventListener('click', (event) => {
-    if (running) return;
-    const rect = canvas.getBoundingClientRect();
-    const index = stage.gateAt(event.clientX - rect.left);
+    if (running || !stage) return;
+    const { x, y } = localPoint(event);
+    const index = stage.gateAt(x, y);
     sound.unlock();
     if (index >= 0 && (event.shiftKey ? removeWire(editor, index) : addWire(editor, index))) render();
   });
 
   document.addEventListener('keydown', (event) => {
-    if (event.code === 'Space' && !running) {
+    if (event.code === 'Space' && !running && event.target === document.body) {
       event.preventDefault();
       sound.unlock();
       void runRound();
@@ -352,6 +394,11 @@ function boot(): void {
   view = PENDING_VIEW;
   wireControls();
   render();
+
+  void createStage().then((created) => {
+    stage = created;
+    stage.setBuild(editor.gates);
+  });
 
   void connectLiveHost().then((live) => {
     host = live ?? createDemoHost();
