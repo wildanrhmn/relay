@@ -37,7 +37,7 @@ const canvas = el<HTMLCanvasElement>('stage');
 
 /** The meter strip mirrors the run live: cells light as the current passes. */
 function markCell(index: number, state: 'cleared' | 'failed'): void {
-  const cells = el('meterStrip').querySelectorAll<HTMLElement>('.cell[data-gate]');
+  const cells = el('meterStrip').querySelectorAll<HTMLElement>('.tile[data-gate]');
   cells.forEach((cell, i) => {
     if (state === 'cleared' && i === index) cell.classList.add('is-cleared');
     if (state === 'failed') {
@@ -100,73 +100,76 @@ function wagerCeiling(build: Build): bigint {
   return limit < view.balance ? limit : view.balance;
 }
 
-/** One instrument cell per gate: fuse slots, the multiplier readout, and the steppers. */
+let selectedGate = 0;
+
+/**
+ * One small tile per gate — number, wire pips, multiplier — and a single
+ * control bar that edits whichever tile is selected. Tiles light as the current
+ * passes and the result holds until the build changes.
+ */
 function renderMeter(): void {
   const strip = el('meterStrip');
   strip.innerHTML = '';
   const runnable = isRunnable(editor);
   const rows = runnable ? paytable(asBuild(editor)) : null;
   const showResult = !running && lastDepth >= 0 && lastResultKey === editor.gates.join(',');
+  selectedGate = Math.min(selectedGate, editor.gates.length - 1);
 
   editor.gates.forEach((lanes, index) => {
-    const cell = document.createElement('div');
-    cell.className = 'cell';
-    cell.dataset.gate = String(index);
-    if (showResult && index < lastDepth) cell.classList.add('is-cleared');
-    if (showResult && index === lastDepth) cell.classList.add('is-failed');
-    if (showResult && index > lastDepth) cell.classList.add('is-dim');
+    const tile = document.createElement('button');
+    tile.type = 'button';
+    tile.className = 'tile';
+    tile.dataset.gate = String(index);
+    tile.setAttribute('role', 'option');
+    tile.setAttribute('aria-selected', String(index === selectedGate));
+    if (showResult && index < lastDepth) tile.classList.add('is-cleared');
+    if (showResult && index === lastDepth) tile.classList.add('is-failed');
+    if (showResult && index > lastDepth) tile.classList.add('is-dim');
 
     const row = rows?.[index];
-    const chance = row ? (Number(row.exactNum) / 4096) * 100 : null;
+    const pips = Array.from({ length: MAX_LANES }, (_, slot) => `<i class="fuse${slot < lanes ? ' on' : ''}"></i>`).join('');
+    tile.innerHTML =
+      `<span class="tile-no">${String(index + 1).padStart(2, '0')}</span>` +
+      `<span class="fuses" aria-label="${lanes} of ${MAX_LANES} wires">${pips}</span>` +
+      `<b class="readout${row && row.multWad <= WAD ? ' sub' : ''}">${row ? formatMultiplier(row.multWad) : '—'}</b>`;
 
-    const head = document.createElement('div');
-    head.className = 'cell-head';
-    head.textContent = `Gate ${String(index + 1).padStart(2, '0')}`;
-
-    const sub = document.createElement('span');
-    sub.className = 'cell-chance';
-    sub.textContent = chance === null ? '' : `${chance.toFixed(chance < 1 ? 2 : 1)}% land here`;
-
-    const fuses = document.createElement('div');
-    fuses.className = 'fuses';
-    fuses.setAttribute('aria-label', `${lanes} of ${MAX_LANES} wires`);
-    for (let slot = 0; slot < MAX_LANES; slot++) {
-      const fuse = document.createElement('i');
-      fuse.className = slot < lanes ? 'fuse on' : 'fuse';
-      fuses.append(fuse);
-    }
-
-    const readout = document.createElement('b');
-    readout.className = `readout${row && row.multWad <= WAD ? ' sub' : ''}`;
-    readout.textContent = row ? formatMultiplier(row.multWad) : '—';
-
-    const ctl = document.createElement('div');
-    ctl.className = 'cell-ctl';
-    const minus = document.createElement('button');
-    minus.type = 'button';
-    minus.textContent = '−';
-    minus.setAttribute('aria-label', `Remove a wire from gate ${index + 1}`);
-    minus.disabled = running;
-    minus.addEventListener('click', () => removeWire(editor, index) && render());
-    const plus = document.createElement('button');
-    plus.type = 'button';
-    plus.textContent = '+';
-    plus.setAttribute('aria-label', `Add a wire to gate ${index + 1}`);
-    plus.disabled = running || pool(editor) <= 0 || lanes >= MAX_LANES;
-    plus.addEventListener('click', () => addWire(editor, index) && render());
-    ctl.append(minus, plus);
-
-    cell.append(head, fuses, readout, sub, ctl);
-    strip.append(cell);
+    tile.addEventListener('click', () => {
+      if (running) return;
+      selectedGate = index;
+      sound.unlock();
+      render();
+    });
+    tile.addEventListener('mouseenter', () => stage?.setHover(running ? -1 : index));
+    tile.addEventListener('mouseleave', () => stage?.setHover(-1));
+    strip.append(tile);
   });
 
-  const add = document.createElement('button');
-  add.type = 'button';
-  add.className = 'cell-add';
-  add.textContent = '+ gate';
+  const ctl = el('meterCtl');
+  const lanes = editor.gates[selectedGate];
+  const row = rows?.[selectedGate];
+  const chance = row ? (Number(row.exactNum) / 4096) * 100 : null;
+  ctl.innerHTML =
+    `<span class="ctl-gate">Gate ${String(selectedGate + 1).padStart(2, '0')}</span>` +
+    `<span class="ctl-wires"><button type="button" id="wireMinus" aria-label="Remove a wire">−</button>` +
+    `<b>${lanes} wire${lanes === 1 ? '' : 's'}</b>` +
+    `<button type="button" id="wirePlus" aria-label="Add a wire">+</button></span>` +
+    `<span class="ctl-note">${chance === null ? '' : `${chance.toFixed(chance < 1 ? 2 : 1)}% of runs stop here`}${lanes === 1 && editor.gates.length > 3 ? ' · − again removes the gate' : ''}</span>` +
+    `<button type="button" id="gateAdd" class="ctl-add">+ Add gate</button>`;
+
+  const minus = el<HTMLButtonElement>('wireMinus');
+  const plus = el<HTMLButtonElement>('wirePlus');
+  const add = el<HTMLButtonElement>('gateAdd');
+  minus.disabled = running || (lanes === 1 && editor.gates.length <= 3);
+  plus.disabled = running || pool(editor) <= 0 || lanes >= MAX_LANES;
   add.disabled = running || pool(editor) <= 0 || editor.gates.length >= MAX_TIERS;
-  add.addEventListener('click', () => addGate(editor) && render());
-  strip.append(add);
+  minus.addEventListener('click', () => removeWire(editor, selectedGate) && render());
+  plus.addEventListener('click', () => addWire(editor, selectedGate) && render());
+  add.addEventListener('click', () => {
+    if (addGate(editor)) {
+      selectedGate = editor.gates.length - 1;
+      render();
+    }
+  });
 }
 
 function renderPresets(): void {
