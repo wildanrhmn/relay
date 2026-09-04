@@ -371,7 +371,6 @@ export class MascotStage implements StageLike {
           pose.footTap = ((now / 700) % 1) < 0.2 ? 1 : 0;
           if (door) door.failed = true;
           failedAt = seg.gate;
-          if (Math.random() < 0.14) this.spawn('star', x + (Math.random() - 0.5) * 40, GROUND_Y - 72, 1, C.brassBright);
           break;
         }
         case 'win': {
@@ -422,8 +421,8 @@ export class MascotStage implements StageLike {
 
     this.drawWall(viewW);
     this.drawFloor(viewW);
-    this.drawConduit(now);
-    this.drawSource(now);
+    this.drawConduit();
+    this.drawSource();
     doors.forEach((d, i) => this.drawDoor(i, d, now, i === this.hover && !this.anim));
     this.drawVolt(pose, now);
     this.drawParticles();
@@ -482,11 +481,11 @@ export class MascotStage implements StageLike {
   }
 
   /** One cable feeding the fuse boxes, low contrast, running behind them. */
-  private drawConduit(now: number): void {
+  private drawConduit(): void {
     const { ctx } = this;
     if (this.lanes.length === 0) return;
     const y = GROUND_Y - DOOR_H - 22;
-    const x0 = SOURCE_X - 89;
+    const x0 = this.doorX(0) - 60;
     const x1 = this.doorX(this.lanes.length - 1);
     ctx.lineCap = 'round';
     ctx.strokeStyle = '#1d1e25';
@@ -495,13 +494,6 @@ export class MascotStage implements StageLike {
     ctx.strokeStyle = 'rgba(217,180,90,0.35)';
     ctx.lineWidth = 1.5;
     ctx.beginPath(); ctx.moveTo(x0, y); ctx.lineTo(x1, y); ctx.stroke();
-    if (this.anim && !this.reduceMotion) {
-      const t = (now / 900) % 1;
-      ctx.fillStyle = C.brassBright;
-      ctx.shadowColor = C.brassBright; ctx.shadowBlur = 10;
-      ctx.beginPath(); ctx.arc(lerp(x0, x1, t), y, 2.6, 0, Math.PI * 2); ctx.fill();
-      ctx.shadowBlur = 0;
-    }
   }
 
   private drawFloor(viewW: number): void {
@@ -516,21 +508,12 @@ export class MascotStage implements StageLike {
     for (let x = Math.floor(x0 / 40) * 40; x < x1; x += 40) ctx.fillRect(x, GROUND_Y + 14, 22, 2);
   }
 
-  private drawSource(now: number): void {
+  private drawSource(): void {
     const { ctx } = this;
-    const pulse = (Math.sin(now / 500) + 1) / 2;
     ctx.fillStyle = C.steel;
     this.roundRect(SOURCE_X - 46, GROUND_Y - 12, 92, 12, 4); ctx.fill();
     ctx.fillStyle = C.brass;
     ctx.fillRect(SOURCE_X - 46, GROUND_Y - 12, 92, 2);
-    ctx.fillRect(SOURCE_X - 92, GROUND_Y - 150, 6, 138);
-    ctx.beginPath();
-    ctx.arc(SOURCE_X - 89, GROUND_Y - 156, 11, 0, Math.PI * 2);
-    ctx.fillStyle = C.brassBright;
-    ctx.shadowColor = C.brassBright;
-    ctx.shadowBlur = 10 + pulse * 14;
-    ctx.fill();
-    ctx.shadowBlur = 0;
   }
 
   /** Arch-shaped doorway path: a rectangle with a semicircular top. */
@@ -683,6 +666,22 @@ export class MascotStage implements StageLike {
     const { ctx } = this;
     const cx = p.x;
     const cy = GROUND_Y - VOLT_R - p.y;
+
+    if (p.mood === 'dazed' && p.tilt < -2) {
+      // Three small stars circling above him, the cartoon way.
+      ctx.font = '700 11px "Chakra Petch", sans-serif';
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+      for (let i = 0; i < 3; i++) {
+        const a = now / 380 + (i * Math.PI * 2) / 3;
+        const sx = cx + Math.cos(a) * 24;
+        const sy = GROUND_Y - VOLT_R * 2 - 14 + Math.sin(a) * 6;
+        ctx.globalAlpha = 0.55 + Math.sin(a) * 0.35;
+        ctx.fillStyle = C.brassBright;
+        ctx.fillText('★', sx, sy);
+      }
+      ctx.globalAlpha = 1;
+    }
     const blink = now > this.blinkAt && now < this.blinkAt + 110;
     if (now > this.blinkAt + 110) this.blinkAt = now + 2400 + Math.random() * 2200;
 
