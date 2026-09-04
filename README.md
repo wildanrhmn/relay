@@ -72,6 +72,33 @@ Then open `http://localhost:3300/?game=http://localhost:5173`.
 `http://localhost:5173` on its own boots the demo host and is fully playable, which is
 what the jam gallery and judges load.
 
+## Deploying
+
+Either host works; both configs are committed and both keep framing open, which
+matters twice — chain.wtf loads the game in an iframe, and the jam gallery renders a
+live playable preview of it. Never add `X-Frame-Options` here.
+
+**Vercel** — `vercel.json` builds `web/` and publishes `web/dist`:
+
+```sh
+npx vercel        # preview
+npx vercel --prod
+```
+
+**Netlify** — `netlify.toml` sets base `web`, publish `dist`:
+
+```sh
+npx netlify deploy
+npx netlify deploy --prod
+```
+
+After deploying, confirm both of these on the live URL:
+
+```sh
+curl -sI https://<your-domain>/ | grep -i x-frame-options   # must print nothing
+curl -s https://<your-domain>/game.manifest.json | head -3  # must be served same-origin
+```
+
 ## Tests
 
 ```sh
