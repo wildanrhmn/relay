@@ -14,7 +14,7 @@ import type { StageEvent, StageLike } from './stage-api';
 
 const DESIGN_H = 560;
 /** Narrow (portrait) stages frame by width instead, so at least this much of the row is visible. */
-const MIN_VIEW_W = 640;
+const MIN_VIEW_W = 500;
 const GROUND_Y = 468;
 const SOURCE_X = 96;
 const FIRST_DOOR_X = 340;
@@ -206,7 +206,7 @@ export class MascotStage implements StageLike {
     this.height = rect.height;
     this.scale = Math.min(rect.height / DESIGN_H, rect.width / MIN_VIEW_W);
     // Sit the scene low in a tall frame so the labels keep headroom.
-    this.offsetY = Math.max(0, rect.height - DESIGN_H * this.scale) * 0.62;
+    this.offsetY = Math.max(0, rect.height - DESIGN_H * this.scale) * 0.58;
     this.canvas.width = Math.floor(rect.width * dpr);
     this.canvas.height = Math.floor(rect.height * dpr);
     this.ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
