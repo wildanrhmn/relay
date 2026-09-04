@@ -1,0 +1,62 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+    <title>Apparatus</title>
+    <meta name="description" content="Spend twelve wires across a row of gates. Each gate needs one to survive. You are paid for how far the current gets." />
+    <link rel="stylesheet" href="/src/styles.css" />
+    <script async src="https://jam.chain.wtf/widget.js"></script>
+  </head>
+  <body>
+    <div id="app">
+      <header class="topbar">
+        <div class="brand">
+          <span class="mark"></span>
+          <span>APPARATUS</span>
+        </div>
+        <div class="balance">
+          <span id="balance">—</span>
+          <span class="symbol" id="symbol">chUSD</span>
+        </div>
+      </header>
+
+      <p class="rule">Spend all twelve wires. A gate opens if <em>any</em> of its wires survive. You are paid for how far the current gets.</p>
+
+      <div class="stage-wrap">
+        <canvas id="stage"></canvas>
+        <div id="verdict" class="verdict"></div>
+        <div id="demoBadge" class="demo-badge" hidden>DEMO</div>
+      </div>
+
+      <div id="gateBar" class="gate-bar"></div>
+
+      <section class="panel">
+        <div class="presets" id="presets"></div>
+        <div class="readout">
+          <div><span>WIRES LEFT</span><b id="pool">0</b></div>
+          <div><span>TOP PAY</span><b id="top">—</b></div>
+          <div><span>ANY PAY</span><b id="hit">—</b></div>
+          <div><span>RTP</span><b>96.00%</b></div>
+        </div>
+        <div class="paytable" id="paytable"></div>
+      </section>
+
+      <footer class="betbar">
+        <div class="amount">
+          <button type="button" data-bet="half" title="Halve">½</button>
+          <input id="wager" inputmode="decimal" value="1" aria-label="Bet amount" />
+          <button type="button" data-bet="double" title="Double">2×</button>
+          <button type="button" data-bet="max" title="Max">MAX</button>
+        </div>
+        <button id="run" class="run">RUN</button>
+        <button id="auto" class="ghost" aria-pressed="false">AUTO</button>
+        <button id="mute" class="ghost" aria-pressed="false" title="Sound">♪</button>
+      </footer>
+
+      <div id="notice" class="notice" hidden></div>
+    </div>
+
+    <script type="module" src="/src/main.ts"></script>
+  </body>
+</html>
