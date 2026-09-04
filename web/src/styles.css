@@ -41,14 +41,17 @@
 
 * { box-sizing: border-box; }
 
-html, body {
+html { overflow-x: hidden; }
+
+/* No fixed height on body: with one, body becomes its own scroll container and
+   window scrolling (and the pinned bet bar on phones) stops working. */
+body {
   margin: 0;
-  height: 100%;
+  min-height: 100dvh;
   background: var(--bg);
   color: var(--ink);
   font: 13px/1.4 var(--font-ui);
   -webkit-font-smoothing: antialiased;
-  overflow-x: hidden;
 }
 
 button, input { font-family: inherit; }
@@ -437,11 +440,95 @@ button { touch-action: manipulation; -webkit-tap-highlight-color: transparent; }
 
 .ctl-note { font-size: 11.5px; color: var(--ink-mute); min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 
-@media (max-width: 940px) {
-  .shell { grid-template-columns: minmax(0, 1fr); grid-template-rows: minmax(260px, 1fr) auto auto; }
-  .stage-col { order: -1; }
-  .sidebar { max-height: 42dvh; }
+/* ---------- responsive ---------- */
+
+@media (max-height: 760px) and (min-width: 941px) {
   .instruction { display: none; }
+}
+
+@media (max-width: 940px) {
+  /* Phones and tablets: a normal scrolling page, stage first, bet button pinned. */
+  .shell {
+    height: auto;
+    min-height: 100dvh;
+    grid-template-columns: minmax(0, 1fr);
+    grid-template-rows: auto;
+    gap: 10px;
+    padding: 10px 10px calc(150px + env(safe-area-inset-bottom));
+  }
+
+  .stage-col { order: -1; }
+
+  .stage {
+    flex: none;
+    aspect-ratio: 16 / 10;
+    min-height: 240px;
+  }
+
+  .stage-top { top: 10px; left: 12px; right: 12px; }
+  .stage-caption { font-size: 11px; }
+  .verdict { font-size: 13px; padding: 8px 12px; bottom: 12px; }
+
+  .sidebar {
+    overflow: visible;
+    max-height: none;
+    min-width: 0;
+    gap: 14px;
+    padding: 16px;
+  }
+
+  .instruction { display: flex; }
+
+  .quick button, .toggle { height: 38px; }
+
+  .meter { padding: 12px 12px 12px; gap: 10px; }
+
+  .meter-strip {
+    overflow-x: auto;
+    scroll-snap-type: x proximity;
+    scrollbar-width: none;
+    margin: 0 -12px;
+    padding: 2px 12px;
+  }
+
+  .meter-strip::-webkit-scrollbar { display: none; }
+  .tile { flex: 0 0 82px; max-width: none; scroll-snap-align: start; }
+
+  .meter-ctl { flex-wrap: wrap; gap: 10px 12px; }
+  .ctl-note { flex: 1 1 100%; white-space: normal; overflow: visible; }
+  .ctl-wires button { width: 40px; height: 36px; }
+  .ctl-add { height: 36px; }
+
+  /* Balance and Run stay reachable while the page scrolls. */
+  .foot {
+    position: fixed;
+    left: 0; right: 0; bottom: 0;
+    z-index: 20;
+    margin: 0;
+    padding: 10px 14px calc(12px + env(safe-area-inset-bottom));
+    background: linear-gradient(180deg, rgba(16,16,22,0) 0%, #101016 18%);
+    box-shadow: 0 -1px 0 rgba(255, 255, 255, 0.06);
+    gap: 8px;
+  }
+
+  .foot .cta { height: 50px; }
+  .toggles { grid-template-columns: 1fr 1fr; }
+
+  /* The jam badge is fixed bottom-right; lift it clear of the pinned bet bar. */
+  #chain-jam-badge { bottom: calc(158px + env(safe-area-inset-bottom)) !important; }
+}
+
+@media (max-width: 520px) {
+  .shell { padding: 8px 8px calc(154px + env(safe-area-inset-bottom)); gap: 8px; }
+  .stage { aspect-ratio: 4 / 3; min-height: 260px; }
+  .sidebar { padding: 14px; }
+  .title { font-size: 18px; }
+  .quick { gap: 5px; }
+  .gauges { grid-template-columns: repeat(3, 1fr); gap: 5px; }
+  .gauge { padding: 9px 8px; }
+  .readout { font-size: 14px; }
+  .tile { flex: 0 0 76px; }
+  .ctl-gate { flex: 0 0 auto; }
 }
 
 @media (prefers-reduced-motion: reduce) {
