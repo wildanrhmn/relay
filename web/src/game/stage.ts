@@ -1,5 +1,3 @@
-import { MAX_LANES } from '../lib/apparatus';
-
 export type StageEvent =
   | { type: 'charge' }
   | { type: 'lane'; live: boolean }
@@ -7,51 +5,41 @@ export type StageEvent =
   | { type: 'failed'; index: number }
   | { type: 'won'; gates: number };
 
-type GateAnim = {
-  lanes: boolean[];
-  /** 0 while the current is still upstream, 1 once this gate has fully resolved. */
-  resolve: number;
-  settled: boolean;
-};
-
 const COLORS = {
   bg: '#08090d',
   frame: '#1c2130',
-  frameLive: '#2a5f57',
-  wireIdle: '#2f3646',
+  frameLive: '#2f6f63',
+  wireIdle: '#2b3242',
   wireLive: '#6ef7cf',
-  wireDead: '#4a2130',
+  wireDead: '#5a2233',
   spine: '#161b26',
-  current: '#a9fff2',
+  current: '#c4fff5',
   fail: '#ff5c6e',
   gold: '#ffd166',
+  label: '#4a5468',
 };
 
-const GATE_MS = 165;
-const LANE_MS = 55;
-const END_MS = 520;
+const GATE_MS = 150;
+const LANE_MS = 52;
+const END_MS = 560;
+
+type Spark = { x: number; y: number; vx: number; vy: number; life: number; hue: 'dead' | 'live' };
 
 export class Stage {
   private ctx: CanvasRenderingContext2D;
   private raf = 0;
   private width = 0;
   private height = 0;
-  private dpr = 1;
 
   private gates: number[] = [];
   private hover = -1;
+  private sparks: Spark[] = [];
+  private flash = 0;
+  private lastFrame = 0;
 
-  private anim: {
-    trace: boolean[][];
-    depth: number;
-    total: number;
-    start: number;
-    emitted: Set<string>;
-    done: boolean;
-  } | null = null;
-
+  private anim: { trace: boolean[][]; emitted: Set<string>; start: number } | null = null;
   private emit: (event: StageEvent) => void;
-  private reduceMotion = false;
+  private reduceMotion: boolean;
 
   constructor(private canvas: HTMLCanvasElement, emit: (event: StageEvent) => void) {
     const ctx = canvas.getContext('2d');
@@ -75,178 +63,277 @@ export class Stage {
   gateAt(x: number): number {
     const layout = this.layout();
     for (let i = 0; i < layout.length; i++) {
-      if (x >= layout[i].x - layout[i].gap / 2 && x <= layout[i].x + layout[i].w + layout[i].gap / 2) return i;
+      if (x >= layout[i].x - 8 && x <= layout[i].x + layout[i].w + 8) return i;
     }
     return -1;
   }
 
-  play(trace: boolean[][], depth: number, total: number): Promise<void> {
-    this.anim = { trace, depth, total, start: performance.now(), emitted: new Set(), done: false };
+  play(trace: boolean[][]): Promise<void> {
+    this.sparks = [];
+    this.anim = { trace, emitted: new Set(), start: performance.now() };
     this.emit({ type: 'charge' });
 
-    const laneCount = trace.reduce((acc, gate) => acc + gate.length, 0);
-    const duration = this.reduceMotion ? 260 : trace.length * GATE_MS + laneCount * LANE_MS + END_MS;
-    return new Promise((resolve) => setTimeout(() => {
-      if (this.anim) this.anim.done = true;
-      resolve();
-    }, duration));
+    const lanes = trace.reduce((acc, gate) => acc + gate.length, 0);
+    const duration = this.reduceMotion ? 240 : trace.length * GATE_MS + lanes * LANE_MS + END_MS;
+    return new Promise((resolve) => setTimeout(resolve, duration));
   }
 
   clearRound(): void {
     this.anim = null;
+    this.sparks = [];
+    this.flash = 0;
   }
-
-  private resize(): void {
-    const rect = this.canvas.getBoundingClientRect();
-    this.dpr = Math.min(window.devicePixelRatio || 1, 2);
-    this.width = rect.width;
-    this.height = rect.height;
-    this.canvas.width = Math.floor(rect.width * this.dpr);
-    this.canvas.height = Math.floor(rect.height * this.dpr);
-    this.ctx.setTransform(this.dpr, 0, 0, this.dpr, 0, 0);
-  }
-
-  private layout() {
-    const count = Math.max(this.gates.length, 1);
-    const padX = 46;
-    const usable = this.width - padX * 2;
-    const gap = Math.min(16, usable / (count * 5));
-    const w = (usable - gap * (count - 1)) / count;
-    return this.gates.map((lanes, i) => ({ x: padX + i * (w + gap), w, gap, lanes }));
-  }
-
-  /** Milliseconds into the run at which gate `index` begins resolving. */
-  private gateStart(index: number): number {
-    if (!this.anim) return 0;
-    let t = 0;
-    for (let i = 0; i < index; i++) {
-      t += GATE_MS + (this.anim.trace[i]?.length ?? 0) * LANE_MS;
-    }
-    return t;
-  }
-
-  private animState(): GateAnim[] | null {
-    if (!this.anim) return null;
-    const elapsed = this.reduceMotion ? Number.MAX_SAFE_INTEGER : performance.now() - this.anim.start;
-
-    return this.gates.map((lanes, i) => {
-      const traced = this.anim!.trace[i];
-      if (!traced) return { lanes: Array<boolean>(lanes).fill(false), resolve: 0, settled: false };
-
-      const start = this.gateStart(i);
-      const span = GATE_MS + traced.length * LANE_MS;
-      const resolve = Math.max(0, Math.min(1, (elapsed - start) / span));
-
-      if (resolve > 0 && !this.anim!.emitted.has(`g${i}`)) {
-        this.anim!.emitted.add(`g${i}`);
-        traced.forEach((live, laneIndex) => {
-          setTimeout(() => this.emit({ type: 'lane', live }), laneIndex * LANE_MS);
-        });
-      }
-      if (resolve >= 1 && !this.anim!.emitted.has(`r${i}`)) {
-        this.anim!.emitted.add(`r${i}`);
-        const passed = traced.some(Boolean);
-        if (passed) this.emit({ type: 'gate', index: i });
-        else this.emit({ type: 'failed', index: i });
-        if (passed && i === this.anim!.total - 1) this.emit({ type: 'won', gates: this.anim!.total });
-      }
-
-      return { lanes: traced, resolve, settled: resolve >= 1 };
-    });
-  }
-
-  private loop = (): void => {
-    this.draw();
-    this.raf = requestAnimationFrame(this.loop);
-  };
 
   destroy(): void {
     cancelAnimationFrame(this.raf);
   }
 
+  private resize(): void {
+    const rect = this.canvas.getBoundingClientRect();
+    const dpr = Math.min(window.devicePixelRatio || 1, 2);
+    this.width = rect.width;
+    this.height = rect.height;
+    this.canvas.width = Math.floor(rect.width * dpr);
+    this.canvas.height = Math.floor(rect.height * dpr);
+    this.ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+  }
+
+  private layout() {
+    const count = Math.max(this.gates.length, 1);
+    const padX = 44;
+    const usable = this.width - padX * 2;
+    const gap = Math.max(7, Math.min(18, usable / (count * 4.5)));
+    const w = (usable - gap * (count - 1)) / count;
+    return this.gates.map((lanes, i) => ({ x: padX + i * (w + gap), w, lanes }));
+  }
+
+  private gateStart(index: number): number {
+    if (!this.anim) return 0;
+    let t = 0;
+    for (let i = 0; i < index; i++) t += GATE_MS + (this.anim.trace[i]?.length ?? 0) * LANE_MS;
+    return t;
+  }
+
+  /** Per-gate reveal progress in [0,1], plus event dispatch as each gate lands. */
+  private progress(): number[] | null {
+    if (!this.anim) return null;
+    const elapsed = this.reduceMotion ? Number.MAX_SAFE_INTEGER : performance.now() - this.anim.start;
+
+    return this.gates.map((_, i) => {
+      const traced = this.anim!.trace[i];
+      if (!traced) return 0;
+
+      const span = GATE_MS + traced.length * LANE_MS;
+      const value = Math.max(0, Math.min(1, (elapsed - this.gateStart(i)) / span));
+
+      if (value > 0 && !this.anim!.emitted.has(`g${i}`)) {
+        this.anim!.emitted.add(`g${i}`);
+        traced.forEach((live, lane) => setTimeout(() => this.emit({ type: 'lane', live }), lane * LANE_MS));
+      }
+      if (value >= 1 && !this.anim!.emitted.has(`r${i}`)) {
+        this.anim!.emitted.add(`r${i}`);
+        const passed = traced.some(Boolean);
+        if (passed) {
+          this.emit({ type: 'gate', index: i });
+          if (i === this.gates.length - 1) {
+            this.emit({ type: 'won', gates: this.gates.length });
+            this.flash = 1;
+          }
+        } else {
+          this.emit({ type: 'failed', index: i });
+          this.flash = 0.55;
+        }
+      }
+      return value;
+    });
+  }
+
+  private loop = (): void => {
+    const now = performance.now();
+    const dt = Math.min(48, now - (this.lastFrame || now));
+    this.lastFrame = now;
+    this.step(dt);
+    this.draw();
+    this.raf = requestAnimationFrame(this.loop);
+  };
+
+  private step(dt: number): void {
+    this.flash = Math.max(0, this.flash - dt / 520);
+    this.sparks = this.sparks.filter((s) => {
+      s.x += s.vx * (dt / 16);
+      s.y += s.vy * (dt / 16);
+      s.vy += dt / 260;
+      s.life -= dt / 460;
+      return s.life > 0;
+    });
+  }
+
+  private spawnSparks(x: number, y: number, hue: 'dead' | 'live'): void {
+    if (this.reduceMotion) return;
+    const count = hue === 'dead' ? 7 : 4;
+    for (let i = 0; i < count; i++) {
+      this.sparks.push({
+        x,
+        y,
+        vx: (Math.random() - 0.4) * 2.4,
+        vy: (Math.random() - 0.5) * 2.2,
+        life: 0.6 + Math.random() * 0.4,
+        hue,
+      });
+    }
+  }
+
   private draw(): void {
     const { ctx } = this;
-    const state = this.animState();
+    const progress = this.progress();
     const midY = this.height / 2;
+    const layout = this.layout();
 
     ctx.clearRect(0, 0, this.width, this.height);
     ctx.fillStyle = COLORS.bg;
     ctx.fillRect(0, 0, this.width, this.height);
 
-    const layout = this.layout();
-    const laneH = Math.min(15, (this.height - 96) / MAX_LANES);
-    const laneGap = 6;
+    // Scale to the tallest gate in *this* build so a row of single wires reads as
+    // substantial rather than as a thin line floating in an empty frame.
+    const tallest = Math.max(1, ...this.gates);
+    const laneGap = 7;
+    const laneH = Math.max(10, Math.min(30, (this.height - 96 - (tallest - 1) * laneGap) / tallest));
+
+    const failedAt = progress
+      ? progress.findIndex((p, i) => p >= 1 && this.anim?.trace[i] && !this.anim.trace[i].some(Boolean))
+      : -1;
+    const cleared = progress
+      ? progress.filter((p, i) => p >= 1 && this.anim?.trace[i]?.some(Boolean)).length
+      : 0;
 
     ctx.strokeStyle = COLORS.spine;
     ctx.lineWidth = 2;
     ctx.beginPath();
-    ctx.moveTo(16, midY);
-    ctx.lineTo(this.width - 16, midY);
+    ctx.moveTo(14, midY);
+    ctx.lineTo(this.width - 14, midY);
     ctx.stroke();
 
-    const reachedGate = state ? state.findIndex((g) => g.settled && !g.lanes.some(Boolean)) : -1;
-    const clearedCount = state ? state.filter((g) => g.settled && g.lanes.some(Boolean)).length : 0;
-
-    this.drawTerminal(16, midY, clearedCount > 0, false);
+    this.drawCurrent(progress, layout, midY, failedAt);
 
     layout.forEach((gate, i) => {
-      const anim = state?.[i];
+      const value = progress?.[i] ?? 0;
+      const traced = this.anim?.trace[i];
       const stack = gate.lanes;
       const totalH = stack * laneH + (stack - 1) * laneGap;
       const top = midY - totalH / 2;
-      const failedHere = reachedGate === i;
-      const dimmed = reachedGate !== -1 && i > reachedGate;
+      const passed = value >= 1 && traced?.some(Boolean);
+      const failedHere = failedAt === i;
+      const dimmed = failedAt !== -1 && i > failedAt;
 
-      ctx.globalAlpha = dimmed ? 0.25 : 1;
+      ctx.globalAlpha = dimmed ? 0.18 : 1;
 
-      ctx.strokeStyle = anim?.settled && anim.lanes.some(Boolean) ? COLORS.frameLive : COLORS.frame;
-      ctx.lineWidth = this.hover === i && !state ? 2 : 1;
-      this.roundRect(gate.x - 6, top - 12, gate.w + 12, totalH + 24, 8);
+      ctx.strokeStyle = failedHere ? COLORS.fail : passed ? COLORS.frameLive : COLORS.frame;
+      ctx.lineWidth = failedHere ? 2 : this.hover === i && !progress ? 1.6 : 1;
+      this.roundRect(gate.x - 5, top - 11, gate.w + 10, totalH + 22, 9);
       ctx.stroke();
 
       for (let lane = 0; lane < stack; lane++) {
         const y = top + lane * (laneH + laneGap);
-        const revealed = anim ? anim.resolve * stack > lane : false;
-        const live = anim?.lanes[lane] ?? false;
+        const revealed = traced ? value * stack > lane : false;
+        const live = traced?.[lane] ?? false;
 
-        let fill = COLORS.wireIdle;
-        if (anim && revealed) fill = live ? COLORS.wireLive : COLORS.wireDead;
-
-        if (anim && revealed && live) {
-          ctx.shadowColor = COLORS.wireLive;
-          ctx.shadowBlur = 14;
+        if (revealed && !this.anim?.emitted.has(`s${i}-${lane}`)) {
+          this.anim?.emitted.add(`s${i}-${lane}`);
+          this.spawnSparks(gate.x + gate.w / 2, y + laneH / 2, live ? 'live' : 'dead');
         }
-        ctx.fillStyle = fill;
+
+        if (revealed && live) {
+          ctx.shadowColor = COLORS.wireLive;
+          ctx.shadowBlur = 16;
+        }
+        ctx.fillStyle = revealed ? (live ? COLORS.wireLive : COLORS.wireDead) : COLORS.wireIdle;
         this.roundRect(gate.x, y, gate.w, laneH, laneH / 2);
         ctx.fill();
         ctx.shadowBlur = 0;
       }
 
-      if (failedHere) {
-        ctx.strokeStyle = COLORS.fail;
-        ctx.lineWidth = 2;
-        this.roundRect(gate.x - 6, top - 12, gate.w + 12, totalH + 24, 8);
-        ctx.stroke();
-      }
-
-      ctx.globalAlpha = 1;
-      ctx.fillStyle = anim?.settled && anim.lanes.some(Boolean) ? COLORS.wireLive : '#414a5e';
-      ctx.font = '600 10px ui-monospace, SFMono-Regular, Menlo, monospace';
+      ctx.globalAlpha = dimmed ? 0.3 : 1;
+      ctx.fillStyle = passed ? COLORS.wireLive : failedHere ? COLORS.fail : COLORS.label;
+      ctx.font = '600 9px ui-monospace, SFMono-Regular, Menlo, monospace';
       ctx.textAlign = 'center';
-      ctx.fillText(String(i + 1), gate.x + gate.w / 2, top + totalH + 26);
+      ctx.fillText(String(i + 1), gate.x + gate.w / 2, top + totalH + 25);
+      ctx.globalAlpha = 1;
     });
 
-    const won = state !== null && clearedCount === this.gates.length && this.gates.length > 0;
-    this.drawTerminal(this.width - 16, midY, won, won);
+    this.drawSparks();
+
+    const won = progress !== null && cleared === this.gates.length && this.gates.length > 0;
+    this.drawTerminal(14, midY, progress !== null, false);
+    this.drawTerminal(this.width - 14, midY, won, won);
+
+    if (this.flash > 0) {
+      ctx.fillStyle = won ? `rgba(255,209,102,${this.flash * 0.1})` : `rgba(255,92,110,${this.flash * 0.07})`;
+      ctx.fillRect(0, 0, this.width, this.height);
+    }
+  }
+
+  /** The live beam, running from the source to wherever the current has reached. */
+  private drawCurrent(
+    progress: number[] | null,
+    layout: { x: number; w: number }[],
+    midY: number,
+    failedAt: number,
+  ): void {
+    if (!progress || layout.length === 0) return;
+    const { ctx } = this;
+
+    let frontier = 14;
+    for (let i = 0; i < layout.length; i++) {
+      const value = progress[i];
+      if (value <= 0) break;
+      const gate = layout[i];
+      frontier = gate.x + gate.w * Math.min(1, value);
+      if (value >= 1 && failedAt === i) break;
+      if (value >= 1 && i === layout.length - 1) frontier = this.width - 14;
+    }
+
+    const grad = ctx.createLinearGradient(14, 0, frontier, 0);
+    grad.addColorStop(0, 'rgba(110,247,207,0.25)');
+    grad.addColorStop(1, COLORS.current);
+
+    ctx.strokeStyle = grad;
+    ctx.lineWidth = 2.5;
+    ctx.shadowColor = COLORS.current;
+    ctx.shadowBlur = 12;
+    ctx.beginPath();
+    ctx.moveTo(14, midY);
+    ctx.lineTo(frontier, midY);
+    ctx.stroke();
+    ctx.shadowBlur = 0;
+
+    if (failedAt === -1) {
+      ctx.beginPath();
+      ctx.arc(frontier, midY, 3.5, 0, Math.PI * 2);
+      ctx.fillStyle = COLORS.current;
+      ctx.shadowColor = COLORS.current;
+      ctx.shadowBlur = 16;
+      ctx.fill();
+      ctx.shadowBlur = 0;
+    }
+  }
+
+  private drawSparks(): void {
+    const { ctx } = this;
+    for (const spark of this.sparks) {
+      ctx.globalAlpha = Math.max(0, spark.life);
+      ctx.fillStyle = spark.hue === 'live' ? COLORS.wireLive : COLORS.fail;
+      ctx.fillRect(spark.x, spark.y, 1.8, 1.8);
+    }
+    ctx.globalAlpha = 1;
   }
 
   private drawTerminal(x: number, y: number, live: boolean, gold: boolean): void {
     const { ctx } = this;
     ctx.beginPath();
-    ctx.arc(x, y, 7, 0, Math.PI * 2);
+    ctx.arc(x, y, 6.5, 0, Math.PI * 2);
     if (live) {
       ctx.shadowColor = gold ? COLORS.gold : COLORS.current;
-      ctx.shadowBlur = 20;
+      ctx.shadowBlur = gold ? 26 : 16;
     }
     ctx.fillStyle = live ? (gold ? COLORS.gold : COLORS.current) : COLORS.frame;
     ctx.fill();

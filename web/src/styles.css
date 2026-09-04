@@ -88,7 +88,7 @@ body {
 #stage {
   display: block;
   width: 100%;
-  height: 208px;
+  height: 226px;
 }
 
 .verdict {
@@ -259,11 +259,27 @@ body {
   font: 700 14px/1 ui-monospace, monospace;
 }
 
+.paytable-scroll {
+  position: relative;
+}
+
+/* Fades the right edge so a clipped paytable reads as scrollable. */
+.paytable-scroll::after {
+  content: '';
+  position: absolute;
+  inset-block: 0;
+  right: 0;
+  width: 34px;
+  pointer-events: none;
+  background: linear-gradient(90deg, transparent, var(--panel));
+}
+
 .paytable {
   display: flex;
   gap: 5px;
   overflow-x: auto;
   padding-bottom: 2px;
+  scrollbar-width: thin;
 }
 
 .pay-cell {

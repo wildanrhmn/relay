@@ -184,12 +184,9 @@ function render(): void {
   run.textContent = running ? '···' : 'RUN';
 
   const notice = el('notice');
-  if (!view.demo && !view.ready) {
-    notice.hidden = false;
-    notice.textContent = 'Connect your wallet in Chain to place a bet.';
-  } else {
-    notice.hidden = true;
-  }
+  const needsWallet = view.resolved && !view.demo && !view.ready;
+  notice.hidden = !needsWallet;
+  if (needsWallet) notice.textContent = 'Connect your wallet in Chain to place a bet.';
 }
 
 function verdict(text: string, tone: 'win' | 'loss' | 'idle'): void {
@@ -225,7 +222,7 @@ function syntheticTrace(build: Build, depth: number): boolean[][] {
 }
 
 async function runRound(): Promise<void> {
-  if (running || !isRunnable(editor) || !view.ready) return;
+  if (running || !host || !isRunnable(editor) || !view.ready) return;
 
   const build = asBuild(editor);
   const wager = currentWager();
@@ -249,7 +246,7 @@ async function runRound(): Promise<void> {
     const trace =
       round.randomness !== undefined ? resolveTrace(build, round.randomness) : syntheticTrace(build, depth);
 
-    await stage.play(trace, depth, build.length);
+    await stage.play(trace);
     await host.reveal(key);
 
     const payout = round.payout ?? 0n;
@@ -328,15 +325,32 @@ function wireControls(): void {
   });
 }
 
-async function boot(): Promise<void> {
-  host = (await connectLiveHost()) ?? createDemoHost();
-  host.subscribe((next) => {
-    view = next;
-    if (!running) render();
-  });
-  view = host.view();
+/** Shown for the moment it takes to find out whether a real host is listening. */
+const PENDING_VIEW: HostView = {
+  ready: false,
+  resolved: false,
+  demo: false,
+  balance: 0n,
+  decimals: 18,
+  symbol: 'chUSD',
+  rounds: [],
+  maxWagerFor: () => null,
+};
+
+function boot(): void {
+  // Paint the apparatus immediately: probing for the host takes up to 1.5s and
+  // the standalone URL must not open on an empty frame.
+  view = PENDING_VIEW;
   wireControls();
   render();
+
+  void connectLiveHost().then((live) => {
+    host = live ?? createDemoHost();
+    host.subscribe((next) => {
+      view = next;
+      if (!running) render();
+    });
+  });
 }
 
-void boot();
+boot();
