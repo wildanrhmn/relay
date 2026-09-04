@@ -12,5 +12,7 @@ export interface StageLike {
   gateAt(x: number, y: number): number;
   play(trace: boolean[][]): Promise<void>;
   clearRound(): void;
+  /** Multiplier chips drawn over each gate; the 2D fallback ignores them. */
+  setLabels?(texts: string[]): void;
   destroy(): void;
 }

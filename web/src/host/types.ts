@@ -20,6 +20,8 @@ export type HostView = {
   decimals: number;
   symbol: string;
   rounds: RoundView[];
+  /** Visible height inside the host iframe, when the host reports one. */
+  availableHeight?: number;
   /** Null when the host publishes no limit; the caller falls back to its own cap. */
   maxWagerFor(build: Build): bigint | null;
 };

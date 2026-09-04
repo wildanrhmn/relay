@@ -4,7 +4,7 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
     <title>Apparatus</title>
-    <meta name="description" content="Spend twelve wires across a row of gates. Each gate needs one to survive. You are paid for how far the current gets." />
+    <meta name="description" content="Spend twelve wires across a row of gates. A gate opens if any of its wires survive. You are paid for how far the current gets." />
     <link rel="stylesheet" href="/src/styles.css" />
     <script async src="https://jam.chain.wtf/widget.js"></script>
   </head>
@@ -13,8 +13,14 @@
       <aside class="sidebar">
         <div class="brand"><span class="mark"></span><span>APPARATUS</span></div>
 
+        <ol class="guide">
+          <li><i>1</i><span>Spend all <b>12 wires</b> across the gates.</span></li>
+          <li><i>2</i><span>A gate opens if <b>any one</b> of its wires survives.</span></li>
+          <li><i>3</i><span>You are paid for <b>how far</b> the current gets.</span></li>
+        </ol>
+
         <div class="field">
-          <span class="field-label">Bet Amount</span>
+          <span class="field-label">Bet amount</span>
           <div class="amount">
             <input id="wager" inputmode="decimal" value="1" aria-label="Bet amount" />
             <span class="amount-sym" id="symbol">chUSD</span>
@@ -28,7 +34,7 @@
         </div>
 
         <div class="field">
-          <span class="field-label">Build</span>
+          <span class="field-label">Preset builds</span>
           <div class="presets" id="presets"></div>
         </div>
 
@@ -43,30 +49,32 @@
           <div><span>RTP</span><b>96.00%</b></div>
         </div>
 
-        <div class="balance-row">
-          <span>Balance</span>
-          <b><span id="balance">—</span></b>
+        <div class="sidebar-foot">
+          <div class="balance-row">
+            <span>Balance</span>
+            <b><span id="balance">—</span></b>
+          </div>
+          <button id="run" class="run">RUN</button>
+          <div class="toggles">
+            <button id="auto" class="ghost" aria-pressed="false">AUTO</button>
+            <button id="mute" class="ghost" aria-pressed="true">SOUND</button>
+          </div>
+          <div id="notice" class="notice" hidden></div>
         </div>
-
-        <button id="run" class="run">RUN</button>
-
-        <div class="toggles">
-          <button id="auto" class="ghost" aria-pressed="false">AUTO</button>
-          <button id="mute" class="ghost" aria-pressed="false" title="Sound">SOUND</button>
-        </div>
-
-        <div id="notice" class="notice" hidden></div>
       </aside>
 
       <main class="stage-col">
-        <div class="history" id="history"></div>
+        <div class="stage-head">
+          <div class="stage-caption" id="caption">Build your machine, then send the current through it.</div>
+          <div class="history" id="history"></div>
+        </div>
 
         <div class="stage-wrap">
           <canvas id="stage"></canvas>
-          <div class="hud-pill">SPEND 12 WIRES · ANY LIVE WIRE OPENS A GATE</div>
+          <div id="labels" class="label-layer" aria-hidden="true"></div>
+          <div class="stage-vignette" aria-hidden="true"></div>
           <div id="verdict" class="verdict"></div>
           <div id="demoBadge" class="demo-badge" hidden>DEMO</div>
-          <div class="stage-vignette" aria-hidden="true"></div>
         </div>
 
         <div class="paytable-scroll"><div class="paytable" id="paytable"></div></div>

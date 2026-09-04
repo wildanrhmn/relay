@@ -91,6 +91,7 @@ export async function connectLiveHost(timeoutMs = 1500): Promise<GameHost | null
     decimals: snapshot?.token.decimals ?? 18,
     symbol: snapshot?.token.symbol ?? 'chUSD',
     rounds: rounds(),
+    availableHeight: snapshot?.ui.viewport?.availableHeight,
     maxWagerFor: (build) =>
       computeMaxWager(snapshot, { maxMultiplierX: Number(maxMultiplierWad(build)) / Number(WAD) }) ?? null,
   });

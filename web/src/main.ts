@@ -17,6 +17,8 @@ import type { GameHost, HostView, RoundView } from './host/types';
 
 const el = <T extends HTMLElement>(id: string) => document.getElementById(id) as T;
 
+const IDLE_CAPTION = 'Build your machine, then send the current through it.';
+
 const editor = createEditor();
 const sound = new Sound();
 
@@ -60,7 +62,7 @@ async function createStage(): Promise<StageLike> {
   if (hasWebGL) {
     try {
       const { Scene3D } = await import('./game/scene3d');
-      return new Scene3D(canvas, onStageEvent);
+      return new Scene3D(canvas, onStageEvent, el('labels'));
     } catch (error) {
       console.warn('[apparatus] 3D stage unavailable, using 2D fallback', error);
     }
@@ -194,8 +196,17 @@ function renderHistory(): void {
   }
 }
 
+function setCaption(text: string, live = false): void {
+  const node = el('caption');
+  node.textContent = text;
+  node.classList.toggle('is-live', live);
+}
+
 function render(): void {
   stage?.setBuild(editor.gates);
+  if (isRunnable(editor)) {
+    stage?.setLabels?.(paytable(asBuild(editor)).map((row) => formatMultiplier(row.multWad)));
+  }
   renderGateBar();
   renderPresets();
   renderPaytable();
@@ -281,6 +292,7 @@ async function runRound(): Promise<void> {
   running = true;
   lastDepth = -1;
   verdict('', 'idle');
+  setCaption('Current running — it stops at the first gate that holds.', true);
   render();
 
   try {
@@ -312,6 +324,7 @@ async function runRound(): Promise<void> {
     el('auto').setAttribute('aria-pressed', 'false');
   } finally {
     running = false;
+    setCaption(IDLE_CAPTION);
     render();
   }
 
@@ -404,6 +417,11 @@ function boot(): void {
     host = live ?? createDemoHost();
     host.subscribe((next) => {
       view = next;
+      // The host grows the iframe to fit content, so 100dvh is meaningless in
+      // there; size to the height it actually reports instead.
+      if (next.availableHeight) {
+        document.documentElement.style.setProperty('--app-h', `${next.availableHeight}px`);
+      }
       if (!running) render();
     });
   });

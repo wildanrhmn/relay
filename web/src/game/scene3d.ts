@@ -36,11 +36,15 @@ import {
 import type { StageEvent, StageLike } from './stage-api';
 
 const GATE_SPACING = 3.15;
-const LANE_H = 0.4;
-const LANE_GAP = 0.17;
+const LANE_H = 0.3;
+const LANE_GAP = 0.23;
 const GATE_W = 2.5;
 /** How far in front of the frontier gate the camera sits, in world units. */
-const CAM_BACK = 5.2;
+const CAM_BACK = 5.8;
+/** Off-axis so the corridor is seen down its length; head-on, the near gate's
+ *  wires occlude everything behind it and the depth is lost. */
+const CAM_OFF_X = 3.1;
+const CAM_OFF_Y = 1.45;
 const MAX_STACK = 4;
 /**
  * Every gate gets the same outer frame regardless of how many wires it holds —
@@ -117,6 +121,9 @@ export class Scene3D implements StageLike {
   private sparkLight: PointLight;
   private motes: Points;
   private railGroup: Group | null = null;
+  private labelLayer: HTMLElement | null = null;
+  private labels: HTMLElement[] = [];
+  private labelText: string[] = [];
 
   private cameraZ = CAM_BACK;
   private shake = 0;
@@ -126,8 +133,13 @@ export class Scene3D implements StageLike {
   private emit: (event: StageEvent) => void;
   private reduceMotion: boolean;
 
-  constructor(private canvas: HTMLCanvasElement, emit: (event: StageEvent) => void) {
+  constructor(
+    private canvas: HTMLCanvasElement,
+    emit: (event: StageEvent) => void,
+    labelLayer?: HTMLElement,
+  ) {
     this.emit = emit;
+    this.labelLayer = labelLayer ?? null;
     this.reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
 
     this.renderer = new WebGLRenderer({ canvas, antialias: true, alpha: false, powerPreference: 'high-performance' });
@@ -137,7 +149,7 @@ export class Scene3D implements StageLike {
     this.scene.add(this.root);
 
     this.camera = new PerspectiveCamera(52, 1, 0.1, 120);
-    this.camera.position.set(0, 0.55, this.cameraZ);
+    this.camera.position.set(CAM_OFF_X, CAM_OFF_Y, this.cameraZ);
 
     const key = new PointLight(0x9fe8ff, 24, 26, 2);
     key.position.set(2.4, 3.2, 3);
@@ -292,6 +304,7 @@ export class Scene3D implements StageLike {
     });
 
     this.buildRails();
+    this.buildLabels();
     this.resetVisuals();
   }
 
@@ -323,6 +336,63 @@ export class Scene3D implements StageLike {
     }
     this.railGroup = group;
     this.root.add(group);
+  }
+
+  /** One HTML chip per gate, projected onto the canvas each frame. Crisper and
+   *  cheaper than 3D text, and it is what makes the corridor legible: you are
+   *  flying through a ladder of named payouts, not past anonymous frames. */
+  private buildLabels(): void {
+    if (!this.labelLayer) return;
+    this.labelLayer.innerHTML = '';
+    this.labels = this.gates.map((_, i) => {
+      const node = document.createElement('div');
+      node.className = 'gate-label';
+      node.innerHTML = `<b>${this.labelText[i] ?? ''}</b><span>gate ${i + 1}</span>`;
+      this.labelLayer!.append(node);
+      return node;
+    });
+  }
+
+  setLabels(texts: string[]): void {
+    this.labelText = [...texts];
+    this.labels.forEach((node, i) => {
+      const value = node.querySelector('b');
+      if (value) value.textContent = this.labelText[i] ?? '';
+    });
+  }
+
+  private updateLabels(failedAt: number, clearedCount: number): void {
+    if (!this.labelLayer || this.labels.length === 0) return;
+    const rect = this.canvas.getBoundingClientRect();
+    const point = new Vector3();
+    // Gates converge toward the vanishing point, so their labels would stack into
+    // an unreadable pile. Walk from the camera outwards and drop any label that
+    // lands too close to the last one kept.
+    let last: { x: number; y: number } | null = null;
+
+    this.gates.forEach((gate, i) => {
+      const node = this.labels[i];
+      if (!node) return;
+      point.set(0, OUTER_H / 2 + 0.12, gate.z);
+      point.project(this.camera);
+
+      const depth = this.cameraZ - gate.z;
+      const x = ((point.x + 1) / 2) * rect.width;
+      const y = ((-point.y + 1) / 2) * rect.height;
+      const crowded = last !== null && Math.hypot(x - last.x, y - last.y) < 64;
+      const visible = point.z < 1 && depth > 0.7 && depth < 24 && !crowded;
+
+      node.style.display = visible ? 'flex' : 'none';
+      if (!visible) return;
+      last = { x, y };
+      const scale = Math.max(0.55, Math.min(1, 4.4 / depth));
+      node.style.transform = `translate(-50%, -100%) translate(${x}px, ${y}px) scale(${scale})`;
+      node.style.opacity = String(Math.max(0.25, Math.min(1, 1.4 - depth / 18)));
+
+      node.classList.toggle('is-failed', failedAt === i);
+      node.classList.toggle('is-cleared', this.anim !== null && i < clearedCount);
+      node.classList.toggle('is-dim', failedAt !== -1 && i > failedAt);
+    });
   }
 
   private resetVisuals(): void {
@@ -381,6 +451,7 @@ export class Scene3D implements StageLike {
   }
 
   destroy(): void {
+    if (this.labelLayer) this.labelLayer.innerHTML = '';
     cancelAnimationFrame(this.raf);
     window.removeEventListener('resize', this.resize);
     this.disposeGates();
@@ -493,11 +564,11 @@ export class Scene3D implements StageLike {
     this.shake = Math.max(0, this.shake - dt / 420);
     const jitter = this.reduceMotion ? 0 : this.shake * 0.11;
     this.camera.position.set(
-      (Math.random() - 0.5) * jitter,
-      0.55 + (Math.random() - 0.5) * jitter,
+      CAM_OFF_X + (Math.random() - 0.5) * jitter,
+      CAM_OFF_Y + (Math.random() - 0.5) * jitter,
       this.cameraZ,
     );
-    this.camera.lookAt(0, -0.15, this.cameraZ - 8);
+    this.camera.lookAt(0, -0.05, this.cameraZ - 7.4);
 
     const sparkZ = 0.8 - frontier * GATE_SPACING;
     this.spark.position.set(0, 0.05, sparkZ);
@@ -521,6 +592,6 @@ export class Scene3D implements StageLike {
       }
     });
 
-    void cleared;
+    this.updateLabels(failedAt, cleared);
   }
 }
