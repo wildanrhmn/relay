@@ -13,6 +13,8 @@
 import type { StageEvent, StageLike } from './stage-api';
 
 const DESIGN_H = 560;
+/** Narrow (portrait) stages frame by width instead, so at least this much of the row is visible. */
+const MIN_VIEW_W = 640;
 const GROUND_Y = 468;
 const SOURCE_X = 96;
 const FIRST_DOOR_X = 340;
@@ -76,6 +78,7 @@ export class MascotStage implements StageLike {
   private width = 0;
   private height = 0;
   private scale = 1;
+  private offsetY = 0;
 
   private lanes: number[] = [];
   private labels: string[] = [];
@@ -126,7 +129,7 @@ export class MascotStage implements StageLike {
 
   gateAt(x: number, y: number): number {
     const wx = x / this.scale + this.camX;
-    const wy = y / this.scale;
+    const wy = (y - this.offsetY) / this.scale;
     for (let i = 0; i < this.lanes.length; i++) {
       const dx = this.doorX(i);
       if (wx >= dx - DOOR_W / 2 - 14 && wx <= dx + DOOR_W / 2 + 14 && wy >= GROUND_Y - DOOR_H - 60 && wy <= GROUND_Y) return i;
@@ -201,7 +204,9 @@ export class MascotStage implements StageLike {
     const dpr = Math.min(window.devicePixelRatio || 1, 2);
     this.width = rect.width;
     this.height = rect.height;
-    this.scale = rect.height / DESIGN_H;
+    this.scale = Math.min(rect.height / DESIGN_H, rect.width / MIN_VIEW_W);
+    // Sit the scene low in a tall frame so the labels keep headroom.
+    this.offsetY = Math.max(0, rect.height - DESIGN_H * this.scale) * 0.62;
     this.canvas.width = Math.floor(rect.width * dpr);
     this.canvas.height = Math.floor(rect.height * dpr);
     this.ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
@@ -415,7 +420,7 @@ export class MascotStage implements StageLike {
 
     const kick = this.reduceMotion ? 0 : this.camShake * 9;
     ctx.save();
-    ctx.translate((Math.random() - 0.5) * kick, (Math.random() - 0.5) * kick * 0.6);
+    ctx.translate((Math.random() - 0.5) * kick, this.offsetY + (Math.random() - 0.5) * kick * 0.6);
     ctx.scale(this.scale, this.scale);
     ctx.translate(-this.camX, 0);
 
@@ -442,16 +447,17 @@ export class MascotStage implements StageLike {
     const x0 = this.camX - 60;
     const x1 = this.camX + viewW + 60;
 
-    const g = ctx.createLinearGradient(0, -40, 0, GROUND_Y);
+    const top = -this.offsetY / this.scale - 40;
+    const g = ctx.createLinearGradient(0, top, 0, GROUND_Y);
     g.addColorStop(0, '#090a0d');
     g.addColorStop(0.55, '#0e0f14');
     g.addColorStop(1, '#141419');
     ctx.fillStyle = g;
-    ctx.fillRect(x0, -40, x1 - x0, GROUND_Y + 40);
+    ctx.fillRect(x0, top, x1 - x0, GROUND_Y - top);
 
     ctx.fillStyle = 'rgba(255,255,255,0.032)';
     for (let x = Math.floor(x0 / 8) * 8; x < x1; x += 8) {
-      for (let y = 0; y < GROUND_Y; y += 8) ctx.fillRect(x + ((y / 8) % 2) * 4, y, 1, 1);
+      for (let y = Math.floor(top / 8) * 8; y < GROUND_Y; y += 8) ctx.fillRect(x + ((y / 8) % 2) * 4, y, 1, 1);
     }
 
     // a soft pool of light over each door
@@ -501,7 +507,7 @@ export class MascotStage implements StageLike {
     const x0 = this.camX - 60;
     const x1 = this.camX + viewW + 60;
     ctx.fillStyle = C.floor;
-    ctx.fillRect(x0, GROUND_Y, x1 - x0, DESIGN_H - GROUND_Y + 40);
+    ctx.fillRect(x0, GROUND_Y, x1 - x0, (this.height - this.offsetY) / this.scale - GROUND_Y + 40);
     ctx.fillStyle = C.floorEdge;
     ctx.fillRect(x0, GROUND_Y, x1 - x0, 3);
     ctx.fillStyle = 'rgba(255,255,255,0.05)';
