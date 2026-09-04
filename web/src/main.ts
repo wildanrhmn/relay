@@ -29,9 +29,23 @@ let running = false;
 let auto = false;
 let clearedNotes = 0;
 let lastDepth = -1;
+/** Build the last result belongs to; the meter only shows it while that build is still on the bench. */
+let lastResultKey = '';
 const history: { multWad: bigint; win: boolean }[] = [];
 
 const canvas = el<HTMLCanvasElement>('stage');
+
+/** The meter strip mirrors the run live: cells light as the current passes. */
+function markCell(index: number, state: 'cleared' | 'failed'): void {
+  const cells = el('meterStrip').querySelectorAll<HTMLElement>('.cell[data-gate]');
+  cells.forEach((cell, i) => {
+    if (state === 'cleared' && i === index) cell.classList.add('is-cleared');
+    if (state === 'failed') {
+      if (i === index) cell.classList.add('is-failed');
+      if (i > index) cell.classList.add('is-dim');
+    }
+  });
+}
 
 function onStageEvent(event: StageEvent): void {
   switch (event.type) {
@@ -44,9 +58,11 @@ function onStageEvent(event: StageEvent): void {
       break;
     case 'gate':
       sound.gateCleared(clearedNotes++);
+      markCell(event.index, 'cleared');
       break;
     case 'failed':
       sound.failed();
+      markCell(event.index, 'failed');
       break;
     case 'won':
       sound.won(event.gates);
@@ -96,43 +112,73 @@ function wagerCeiling(build: Build): bigint {
   return limit < view.balance ? limit : view.balance;
 }
 
-function renderGateBar(): void {
-  const bar = el('gateBar');
-  bar.innerHTML = '';
+/** One instrument cell per gate: fuse slots, the multiplier readout, and the steppers. */
+function renderMeter(): void {
+  const strip = el('meterStrip');
+  strip.innerHTML = '';
+  const runnable = isRunnable(editor);
+  const rows = runnable ? paytable(asBuild(editor)) : null;
+  const showResult = !running && lastDepth >= 0 && lastResultKey === editor.gates.join(',');
 
   editor.gates.forEach((lanes, index) => {
     const cell = document.createElement('div');
-    cell.className = 'gate-cell';
+    cell.className = 'cell';
+    cell.dataset.gate = String(index);
+    if (showResult && index < lastDepth) cell.classList.add('is-cleared');
+    if (showResult && index === lastDepth) cell.classList.add('is-failed');
+    if (showResult && index > lastDepth) cell.classList.add('is-dim');
 
-    const up = document.createElement('button');
-    up.type = 'button';
-    up.textContent = '+';
-    up.title = `Add a wire to gate ${index + 1}`;
-    up.disabled = running || pool(editor) <= 0 || lanes >= MAX_LANES;
-    up.addEventListener('click', () => addWire(editor, index) && render());
+    const row = rows?.[index];
+    const chance = row ? (Number(row.exactNum) / 4096) * 100 : null;
 
-    const count = document.createElement('span');
-    count.className = 'gate-count';
-    count.textContent = String(lanes);
+    const head = document.createElement('div');
+    head.className = 'cell-head';
+    head.textContent = `Gate ${String(index + 1).padStart(2, '0')}`;
 
-    const down = document.createElement('button');
-    down.type = 'button';
-    down.textContent = '−';
-    down.title = `Remove a wire from gate ${index + 1}`;
-    down.disabled = running;
-    down.addEventListener('click', () => removeWire(editor, index) && render());
+    const sub = document.createElement('span');
+    sub.className = 'cell-chance';
+    sub.textContent = chance === null ? '' : `${chance.toFixed(chance < 1 ? 2 : 1)}% land here`;
 
-    cell.append(up, count, down);
-    bar.append(cell);
+    const fuses = document.createElement('div');
+    fuses.className = 'fuses';
+    fuses.setAttribute('aria-label', `${lanes} of ${MAX_LANES} wires`);
+    for (let slot = 0; slot < MAX_LANES; slot++) {
+      const fuse = document.createElement('i');
+      fuse.className = slot < lanes ? 'fuse on' : 'fuse';
+      fuses.append(fuse);
+    }
+
+    const readout = document.createElement('b');
+    readout.className = `readout${row && row.multWad <= WAD ? ' sub' : ''}`;
+    readout.textContent = row ? formatMultiplier(row.multWad) : '—';
+
+    const ctl = document.createElement('div');
+    ctl.className = 'cell-ctl';
+    const minus = document.createElement('button');
+    minus.type = 'button';
+    minus.textContent = '−';
+    minus.setAttribute('aria-label', `Remove a wire from gate ${index + 1}`);
+    minus.disabled = running;
+    minus.addEventListener('click', () => removeWire(editor, index) && render());
+    const plus = document.createElement('button');
+    plus.type = 'button';
+    plus.textContent = '+';
+    plus.setAttribute('aria-label', `Add a wire to gate ${index + 1}`);
+    plus.disabled = running || pool(editor) <= 0 || lanes >= MAX_LANES;
+    plus.addEventListener('click', () => addWire(editor, index) && render());
+    ctl.append(minus, plus);
+
+    cell.append(head, fuses, readout, sub, ctl);
+    strip.append(cell);
   });
 
   const add = document.createElement('button');
   add.type = 'button';
-  add.className = 'add-gate';
-  add.textContent = '+ GATE';
+  add.className = 'cell-add';
+  add.textContent = '+ gate';
   add.disabled = running || pool(editor) <= 0 || editor.gates.length >= MAX_TIERS;
   add.addEventListener('click', () => addGate(editor) && render());
-  bar.append(add);
+  strip.append(add);
 }
 
 function renderPresets(): void {
@@ -162,34 +208,11 @@ function renderPresets(): void {
   }
 }
 
-function renderPaytable(): void {
-  const wrap = el('paytable');
-  wrap.innerHTML = '';
-
-  if (!isRunnable(editor)) {
-    wrap.innerHTML = '<div class="paytable-empty">Spend all twelve wires to arm the apparatus.</div>';
-    return;
-  }
-
-  for (const row of paytable(asBuild(editor))) {
-    const chance = (Number(row.exactNum) / 4096) * 100;
-    const cell = document.createElement('div');
-    cell.className = 'pay-cell';
-    if (row.multWad > WAD) cell.classList.add('pay-win');
-    if (row.depth === lastDepth) cell.classList.add('pay-reached');
-    cell.innerHTML =
-      `<b>${formatMultiplier(row.multWad)}</b>` +
-      `<span>${row.depth} gate${row.depth > 1 ? 's' : ''}</span>` +
-      `<i>${chance.toFixed(chance < 1 ? 2 : 1)}%</i>`;
-    wrap.append(cell);
-  }
-}
-
 function renderHistory(): void {
   const wrap = el('history');
   wrap.innerHTML = '';
-  for (const entry of history.slice(-7)) {
-    const chip = document.createElement('div');
+  for (const entry of history.slice(-6)) {
+    const chip = document.createElement('span');
     chip.className = `hist-chip${entry.win ? ' hist-win' : ''}`;
     chip.textContent = formatMultiplier(entry.multWad);
     wrap.append(chip);
@@ -204,17 +227,15 @@ function setCaption(text: string, live = false): void {
 
 function render(): void {
   stage?.setBuild(editor.gates);
-  if (isRunnable(editor)) {
-    stage?.setLabels?.(paytable(asBuild(editor)).map((row) => formatMultiplier(row.multWad)));
-  }
-  renderGateBar();
+  const runnable = isRunnable(editor);
+  if (runnable) stage?.setLabels?.(paytable(asBuild(editor)).map((row) => formatMultiplier(row.multWad)));
+
+  renderMeter();
   renderPresets();
-  renderPaytable();
   renderHistory();
 
-  const runnable = isRunnable(editor);
   const left = pool(editor);
-  el('pool').textContent = `${left} left`;
+  el('pool').textContent = left === 0 ? 'All 12 wires placed' : `${left} wire${left === 1 ? '' : 's'} left`;
   el('top').textContent = runnable ? formatMultiplier(maxMultiplierWad(asBuild(editor))) : '—';
   el('hit').textContent = runnable
     ? `${((Number(paytable(asBuild(editor))[0].reachNum) / 4096) * 100).toFixed(1)}%`
@@ -226,7 +247,7 @@ function render(): void {
 
   const run = el<HTMLButtonElement>('run');
   run.disabled = running || !runnable || !view.ready;
-  run.textContent = running ? '· · ·' : 'RUN';
+  run.textContent = running ? 'Running…' : 'Run';
 
   const notice = el('notice');
   const needsWallet = view.resolved && !view.demo && !view.ready;
@@ -308,6 +329,7 @@ async function runRound(): Promise<void> {
     const payout = round.payout ?? 0n;
     const multWad = (payout * WAD) / wager;
     lastDepth = depth;
+    lastResultKey = build.join(',');
     history.push({ multWad, win: payout > wager });
 
     if (payout > wager) {
@@ -348,7 +370,7 @@ function wireControls(): void {
   el('mute').addEventListener('click', () => {
     sound.muted = !sound.muted;
     el('mute').setAttribute('aria-pressed', String(!sound.muted));
-    el('mute').textContent = sound.muted ? 'MUTED' : 'SOUND';
+    el('mute').textContent = sound.muted ? 'Muted' : 'Sound';
   });
 
   for (const button of document.querySelectorAll<HTMLButtonElement>('[data-bet]')) {
@@ -410,7 +432,7 @@ function boot(): void {
 
   void createStage().then((created) => {
     stage = created;
-    stage.setBuild(editor.gates);
+    render();
   });
 
   void connectLiveHost().then((live) => {

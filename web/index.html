@@ -3,81 +3,90 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+    <meta name="theme-color" content="#0a0a0d" />
     <title>Apparatus</title>
     <meta name="description" content="Spend twelve wires across a row of gates. A gate opens if any of its wires survive. You are paid for how far the current gets." />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:ital,wght@1,800&family=Rubik:wght@400;500;600&family=Chakra+Petch:ital,wght@0,500;0,700;1,700&display=swap" rel="stylesheet" />
     <link rel="stylesheet" href="/src/styles.css" />
     <script async src="https://jam.chain.wtf/widget.js"></script>
   </head>
   <body>
-    <div id="app">
-      <aside class="sidebar">
-        <div class="brand"><span class="mark"></span><span>APPARATUS</span></div>
+    <div id="app" class="shell">
+      <aside class="card sidebar">
+        <header class="masthead">
+          <h1 class="title">Apparatus</h1>
+          <span class="plate" id="demoBadge" hidden>Demo</span>
+        </header>
 
-        <ol class="guide">
-          <li><i>1</i><span>Spend all <b>12 wires</b> across the gates.</span></li>
-          <li><i>2</i><span>A gate opens if <b>any one</b> of its wires survives.</span></li>
-          <li><i>3</i><span>You are paid for <b>how far</b> the current gets.</span></li>
-        </ol>
+        <section class="instruction" aria-label="How to play">
+          <p>Spend all <b>12 wires</b> across the gates.</p>
+          <p>A gate opens if <b>any one</b> of its wires survives.</p>
+          <p>You are paid for <b>how far</b> the current gets.</p>
+        </section>
 
         <div class="field">
-          <span class="field-label">Bet amount</span>
+          <label class="field-label" for="wager">Bet amount</label>
           <div class="amount">
-            <input id="wager" inputmode="decimal" value="1" aria-label="Bet amount" />
+            <input id="wager" name="wager" inputmode="decimal" autocomplete="off" spellcheck="false" value="1" />
             <span class="amount-sym" id="symbol">chUSD</span>
           </div>
-          <div class="quick">
-            <button type="button" data-bet="quarter">1/4</button>
-            <button type="button" data-bet="half">1/2</button>
-            <button type="button" data-bet="double">2x</button>
+          <div class="quick" role="group" aria-label="Adjust bet">
+            <button type="button" data-bet="quarter">¼</button>
+            <button type="button" data-bet="half">½</button>
+            <button type="button" data-bet="double">2×</button>
             <button type="button" data-bet="max">Max</button>
           </div>
         </div>
 
         <div class="field">
-          <span class="field-label">Preset builds</span>
-          <div class="presets" id="presets"></div>
+          <span class="field-label">Build</span>
+          <div class="presets" id="presets" role="group" aria-label="Preset builds"></div>
         </div>
 
-        <div class="field">
-          <span class="field-label">Wires per gate<b class="pool-tag" id="pool">0 left</b></span>
-          <div id="gateBar" class="gate-bar"></div>
+        <div class="gauges">
+          <div class="gauge"><span>Top pay</span><b class="readout" id="top">—</b></div>
+          <div class="gauge"><span>Any pay</span><b class="readout" id="hit">—</b></div>
+          <div class="gauge"><span>Return</span><b class="readout">96.00%</b></div>
         </div>
 
-        <div class="readout">
-          <div><span>Top pay</span><b id="top">—</b></div>
-          <div><span>Any pay</span><b id="hit">—</b></div>
-          <div><span>RTP</span><b>96.00%</b></div>
+        <div class="field recent">
+          <span class="field-label">Recent runs</span>
+          <div class="history" id="history" aria-label="Recent results"></div>
         </div>
 
-        <div class="sidebar-foot">
+        <div class="foot">
           <div class="balance-row">
             <span>Balance</span>
-            <b><span id="balance">—</span></b>
+            <b class="readout"><span id="balance">—</span></b>
           </div>
-          <button id="run" class="run">RUN</button>
+          <button id="run" class="cta" type="button">Run</button>
           <div class="toggles">
-            <button id="auto" class="ghost" aria-pressed="false">AUTO</button>
-            <button id="mute" class="ghost" aria-pressed="true">SOUND</button>
+            <button id="auto" class="toggle" type="button" aria-pressed="false">Auto</button>
+            <button id="mute" class="toggle" type="button" aria-pressed="true">Sound</button>
           </div>
-          <div id="notice" class="notice" hidden></div>
+          <p id="notice" class="notice" hidden></p>
         </div>
       </aside>
 
       <main class="stage-col">
-        <div class="stage-head">
-          <div class="stage-caption" id="caption">Build your machine, then send the current through it.</div>
-          <div class="history" id="history"></div>
-        </div>
-
-        <div class="stage-wrap">
-          <canvas id="stage"></canvas>
+        <div class="card stage">
+          <canvas id="stage" aria-label="The apparatus"></canvas>
           <div id="labels" class="label-layer" aria-hidden="true"></div>
-          <div class="stage-vignette" aria-hidden="true"></div>
-          <div id="verdict" class="verdict"></div>
-          <div id="demoBadge" class="demo-badge" hidden>DEMO</div>
+          <div class="stage-top">
+            <span class="stage-caption" id="caption">Build your machine, then send the current through it.</span>
+          </div>
+          <div id="verdict" class="verdict" role="status" aria-live="polite"></div>
         </div>
 
-        <div class="paytable-scroll"><div class="paytable" id="paytable"></div></div>
+        <div class="card meter" id="meter" aria-label="Gates">
+          <div class="meter-head">
+            <span class="field-label">Gate meter</span>
+            <span class="plate plate-brass" id="pool">0 wires left</span>
+          </div>
+          <div class="meter-strip" id="meterStrip"></div>
+        </div>
       </main>
     </div>
 
