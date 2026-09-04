@@ -62,6 +62,23 @@ export class Sound {
     osc.stop(now + duration + 0.02);
   }
 
+  private slide(fromHz: number, toHz: number, duration: number, type: OscillatorType, gain: number): void {
+    const live = this.live;
+    if (!live) return;
+    const { ctx, master } = live;
+    const now = ctx.currentTime;
+    const osc = ctx.createOscillator();
+    osc.type = type;
+    osc.frequency.setValueAtTime(fromHz, now);
+    osc.frequency.exponentialRampToValueAtTime(toHz, now + duration);
+    const env = ctx.createGain();
+    env.gain.setValueAtTime(gain, now);
+    env.gain.exponentialRampToValueAtTime(0.0001, now + duration);
+    osc.connect(env).connect(master);
+    osc.start(now);
+    osc.stop(now + duration + 0.02);
+  }
+
   private burst(duration: number, gain: number, hz: number): void {
     const live = this.live;
     if (!live || !this.noise) return;
@@ -91,21 +108,26 @@ export class Sound {
   }
 
   laneLive(): void {
-    this.burst(0.05, 0.09, 2400);
+    this.tone(1900, 0.07, 'square', 0.05, 30);
+    this.burst(0.05, 0.1, 2600);
   }
 
   laneDead(): void {
-    this.burst(0.06, 0.05, 420);
+    this.burst(0.09, 0.14, 240);
+    this.tone(88, 0.12, 'sine', 0.12);
   }
 
   gateCleared(step: number): void {
+    this.tone(140, 0.07, 'sawtooth', 0.09);
+    this.burst(0.06, 0.08, 700);
     this.tone(noteHz(step), 0.34, 'triangle', 0.22);
     this.tone(noteHz(step) * 2, 0.16, 'sine', 0.07, 4);
   }
 
   failed(): void {
-    this.tone(96, 0.34, 'sawtooth', 0.13);
-    this.burst(0.22, 0.09, 260);
+    this.burst(0.16, 0.16, 420);
+    this.burst(0.3, 0.08, 160);
+    this.slide(180, 52, 0.42, 'sawtooth', 0.14);
   }
 
   won(gatesCleared: number): void {

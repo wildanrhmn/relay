@@ -20,7 +20,8 @@ function randomWord(): bigint {
   return out;
 }
 
-export function createDemoHost(): GameHost {
+/** Demo-only tuning switch: `?force=clear` makes every wire survive so the full-clear celebration can be seen on demand. */
+export function createDemoHost(options: { forceClear?: boolean } = {}): GameHost {
   let balance = STARTING_BALANCE;
   let counter = 0;
   const rounds = new Map<string, RoundView>();
@@ -59,7 +60,7 @@ export function createDemoHost(): GameHost {
       setTimeout(() => {
         const round = rounds.get(key);
         if (!round) return;
-        const randomness = randomWord();
+        const randomness = options.forceClear ? (1n << 256n) - 1n : randomWord();
         const depth = resolveDepth(build, randomness);
         rounds.set(key, {
           ...round,

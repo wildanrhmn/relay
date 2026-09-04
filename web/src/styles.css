@@ -378,7 +378,7 @@ button { touch-action: manipulation; -webkit-tap-highlight-color: transparent; }
 }
 
 .cell-head { font: 700 9px/1 var(--font-readout); letter-spacing: 0.1em; text-transform: uppercase; color: var(--ink-mute); white-space: nowrap; }
-.cell-chance { font: 500 10px/1 var(--font-ui); color: var(--ink-mute); font-variant-numeric: tabular-nums; margin-top: -3px; }
+.cell-chance { font: 500 10px/1 var(--font-ui); color: var(--ink-mute); font-variant-numeric: tabular-nums; margin-top: -3px; white-space: nowrap; }
 
 .fuses { display: grid; grid-template-columns: repeat(4, 1fr); gap: 3px; }
 

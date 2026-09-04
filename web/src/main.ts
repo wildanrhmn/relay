@@ -424,7 +424,7 @@ function boot(): void {
   });
 
   void connectLiveHost().then((live) => {
-    host = live ?? createDemoHost();
+    host = live ?? createDemoHost({ forceClear: new URLSearchParams(location.search).get('force') === 'clear' });
     host.subscribe((next) => {
       view = next;
       // The host grows the iframe to fit content, so 100dvh is meaningless in
