@@ -1,10 +1,10 @@
 /**
- * Volt — the current, as a character.
+ * Relay — the current, as a character.
  *
  * Each gate is an airlock door with its wires as fuses in the box above it.
- * Volt runs up, the fuses test one by one, any live fuse throws the breaker
- * and the leaves part; a door whose fuses all blow stays shut and Volt runs
- * into it. How far Volt gets is what the round pays on, so the punchline and
+ * Relay runs up, the fuses test one by one, any live fuse throws the breaker
+ * and the leaves part; a door whose fuses all blow stays shut and Relay runs
+ * into it. How far Relay gets is what the round pays on, so the punchline and
  * the payout are the same moment.
  *
  * Everything is drawn in code so nothing is blocked on an asset; the timeline
@@ -22,7 +22,7 @@ const DOOR_GAP = 244;
 const DOOR_W = 124;
 const DOOR_H = 212;
 const FRAME = 12;
-const VOLT_R = 30;
+const RELAY_R = 30;
 const COOL_AT = 7;
 
 const C = {
@@ -158,7 +158,7 @@ export class MascotStage implements StageLike {
 
   // ---------- timeline ----------
 
-  /** Volt gets quicker and cockier the deeper the run goes. */
+  /** Relay gets quicker and cockier the deeper the run goes. */
   private speedAfter(cleared: number): number {
     return Math.max(0.55, Math.pow(0.9, cleared));
   }
@@ -188,7 +188,7 @@ export class MascotStage implements StageLike {
         cleared++;
         if (i === trace.length - 1) push('win', trace.length >= 10 ? 2400 : 1500, {}, i);
       } else {
-        push('slam', 700, { fromX: x, toX: this.doorX(i) - DOOR_W / 2 - VOLT_R + 8 }, i);
+        push('slam', 700, { fromX: x, toX: this.doorX(i) - DOOR_W / 2 - RELAY_R + 8 }, i);
         push('dazed', 900, {}, i);
         break;
       }
@@ -351,8 +351,8 @@ export class MascotStage implements StageLike {
               this.anim.emitted.add(`hit${seg.gate}`);
               this.emit({ type: 'failed', index: seg.gate });
               this.flash = 1; this.flashColor = C.loss; this.camShake = 1;
-              this.spawn('spark', seg.toX! + VOLT_R, GROUND_Y - VOLT_R, 10, C.brassBright);
-              this.spawn('smoke', seg.toX! + VOLT_R - 6, GROUND_Y - VOLT_R + 4, 8, '#8a8a92');
+              this.spawn('spark', seg.toX! + RELAY_R, GROUND_Y - RELAY_R, 10, C.brassBright);
+              this.spawn('smoke', seg.toX! + RELAY_R - 6, GROUND_Y - RELAY_R + 4, 8, '#8a8a92');
             }
           } else {
             const q = (p - stopEnd) / (1 - stopEnd);
@@ -429,7 +429,7 @@ export class MascotStage implements StageLike {
     this.drawConduit();
     this.drawSource();
     doors.forEach((d, i) => this.drawDoor(i, d, now, i === this.hover && !this.anim));
-    this.drawVolt(pose, now);
+    this.drawRelay(pose, now);
     this.drawParticles();
     ctx.restore();
 
@@ -668,10 +668,10 @@ export class MascotStage implements StageLike {
     ctx.restore();
   }
 
-  private drawVolt(p: Pose, now: number): void {
+  private drawRelay(p: Pose, now: number): void {
     const { ctx } = this;
     const cx = p.x;
-    const cy = GROUND_Y - VOLT_R - p.y;
+    const cy = GROUND_Y - RELAY_R - p.y;
 
     if (p.mood === 'dazed' && p.tilt < -2) {
       // Three small stars circling above him, the cartoon way.
@@ -681,7 +681,7 @@ export class MascotStage implements StageLike {
       for (let i = 0; i < 3; i++) {
         const a = now / 380 + (i * Math.PI * 2) / 3;
         const sx = cx + Math.cos(a) * 24;
-        const sy = GROUND_Y - VOLT_R * 2 - 14 + Math.sin(a) * 6;
+        const sy = GROUND_Y - RELAY_R * 2 - 14 + Math.sin(a) * 6;
         ctx.globalAlpha = 0.55 + Math.sin(a) * 0.35;
         ctx.fillStyle = C.brassBright;
         ctx.fillText('★', sx, sy);
@@ -693,7 +693,7 @@ export class MascotStage implements StageLike {
 
     ctx.fillStyle = 'rgba(0,0,0,0.45)';
     ctx.beginPath();
-    ctx.ellipse(cx, GROUND_Y - 2, VOLT_R * 0.95 * p.sx, 6, 0, 0, Math.PI * 2);
+    ctx.ellipse(cx, GROUND_Y - 2, RELAY_R * 0.95 * p.sx, 6, 0, 0, Math.PI * 2);
     ctx.fill();
 
     ctx.save();
@@ -703,10 +703,10 @@ export class MascotStage implements StageLike {
 
     const stride = p.mood === 'run' ? Math.sin(p.legs * Math.PI) * 10 : 0;
     ctx.fillStyle = C.ink;
-    ctx.beginPath(); ctx.ellipse(-11 + stride, VOLT_R - 2 - p.footTap * 7, 9, 5, 0, 0, Math.PI * 2); ctx.fill();
-    ctx.beginPath(); ctx.ellipse(11 - stride, VOLT_R - 2, 9, 5, 0, 0, Math.PI * 2); ctx.fill();
+    ctx.beginPath(); ctx.ellipse(-11 + stride, RELAY_R - 2 - p.footTap * 7, 9, 5, 0, 0, Math.PI * 2); ctx.fill();
+    ctx.beginPath(); ctx.ellipse(11 - stride, RELAY_R - 2, 9, 5, 0, 0, Math.PI * 2); ctx.fill();
 
-    const grad = ctx.createRadialGradient(-8, -10, 4, 0, 0, VOLT_R + 8);
+    const grad = ctx.createRadialGradient(-8, -10, 4, 0, 0, RELAY_R + 8);
     grad.addColorStop(0, '#fff3b0');
     grad.addColorStop(0.55, C.brassBright);
     grad.addColorStop(1, '#f2a13a');
@@ -714,10 +714,10 @@ export class MascotStage implements StageLike {
     ctx.strokeStyle = C.ink;
     ctx.lineWidth = 3;
     ctx.beginPath();
-    ctx.moveTo(0, -VOLT_R - 14);
-    ctx.bezierCurveTo(VOLT_R * 0.9, -VOLT_R - 6, VOLT_R + 2, VOLT_R * 0.2, VOLT_R * 0.7, VOLT_R * 0.75);
-    ctx.bezierCurveTo(VOLT_R * 0.35, VOLT_R + 2, -VOLT_R * 0.35, VOLT_R + 2, -VOLT_R * 0.7, VOLT_R * 0.75);
-    ctx.bezierCurveTo(-VOLT_R - 2, VOLT_R * 0.2, -VOLT_R * 0.9, -VOLT_R - 6, 0, -VOLT_R - 14);
+    ctx.moveTo(0, -RELAY_R - 14);
+    ctx.bezierCurveTo(RELAY_R * 0.9, -RELAY_R - 6, RELAY_R + 2, RELAY_R * 0.2, RELAY_R * 0.7, RELAY_R * 0.75);
+    ctx.bezierCurveTo(RELAY_R * 0.35, RELAY_R + 2, -RELAY_R * 0.35, RELAY_R + 2, -RELAY_R * 0.7, RELAY_R * 0.75);
+    ctx.bezierCurveTo(-RELAY_R - 2, RELAY_R * 0.2, -RELAY_R * 0.9, -RELAY_R - 6, 0, -RELAY_R - 14);
     ctx.closePath();
     ctx.fill();
     ctx.stroke();
@@ -725,12 +725,12 @@ export class MascotStage implements StageLike {
     const flick = p.mood === 'charge' || p.mood === 'run' ? 1 + Math.random() * 0.5 : 1 + (Math.random() < 0.02 ? 0.4 : 0);
     ctx.fillStyle = '#fff6c8';
     ctx.beginPath();
-    ctx.moveTo(2, -VOLT_R - 12);
-    ctx.lineTo(10 * flick, -VOLT_R - 26 * flick);
-    ctx.lineTo(4, -VOLT_R - 24 * flick);
-    ctx.lineTo(9 * flick, -VOLT_R - 38 * flick);
-    ctx.lineTo(-2, -VOLT_R - 22 * flick);
-    ctx.lineTo(3, -VOLT_R - 22 * flick);
+    ctx.moveTo(2, -RELAY_R - 12);
+    ctx.lineTo(10 * flick, -RELAY_R - 26 * flick);
+    ctx.lineTo(4, -RELAY_R - 24 * flick);
+    ctx.lineTo(9 * flick, -RELAY_R - 38 * flick);
+    ctx.lineTo(-2, -RELAY_R - 22 * flick);
+    ctx.lineTo(3, -RELAY_R - 22 * flick);
     ctx.closePath();
     ctx.fill();
     ctx.stroke();

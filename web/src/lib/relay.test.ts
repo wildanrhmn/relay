@@ -16,7 +16,7 @@ import {
   resolveTrace,
   topProbabilityWad,
   validateBuild,
-} from './voltrun';
+} from './relay';
 
 const BALANCED = [3, 2, 2, 2, 1, 1, 1];
 const GRIND = [4, 4, 4];

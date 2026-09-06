@@ -26,7 +26,7 @@ import {
   resolveDepth,
   topProbabilityWad,
   type Build,
-} from './voltrun';
+} from './relay';
 
 const REPO = path.resolve(import.meta.dirname, '../../..');
 const PORT = 8546;
@@ -42,7 +42,7 @@ const chain = defineChain({
 
 async function compile() {
   const solc = (await import(pathToFileURL(path.join(REPO, 'sdk/node_modules/solc/index.js')).href)).default;
-  const target = 'contracts/VoltRun.sol';
+  const target = 'contracts/Relay.sol';
   const findImports = (p: string) => {
     for (const candidate of [path.resolve(REPO, p), path.resolve(REPO, 'contracts', p)]) {
       if (fs.existsSync(candidate)) return { contents: fs.readFileSync(candidate, 'utf8') };
@@ -61,7 +61,7 @@ async function compile() {
   const out = JSON.parse(solc.compile(JSON.stringify(input), { import: findImports }));
   const fatal = (out.errors ?? []).filter((e: { severity: string }) => e.severity === 'error');
   if (fatal.length) throw new Error(fatal.map((e: { formattedMessage: string }) => e.formattedMessage).join('\n'));
-  const artifact = out.contracts[target].VoltRunGame;
+  const artifact = out.contracts[target].RelayGame;
   return { abi: artifact.abi as Abi, bytecode: `0x${artifact.evm.bytecode.object}` as const };
 }
 

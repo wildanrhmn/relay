@@ -7,7 +7,7 @@ import {
   paytable,
   resolveTrace,
   type Build,
-} from './lib/voltrun';
+} from './lib/relay';
 import { PRESETS, addGate, addWire, asBuild, createEditor, isRunnable, pool, removeWire } from './game/build';
 import { Sound } from './game/sound';
 import type { StageEvent, StageLike } from './game/stage-api';
@@ -331,7 +331,7 @@ async function runRound(): Promise<void> {
       verdict('Gate 1 held. Nothing got through.', 'loss');
     }
   } catch (error) {
-    console.error('[voltrun] round failed', error);
+    console.error('[relay] round failed', error);
     verdict(shortError(error), 'loss');
     auto = false;
     el('auto').setAttribute('aria-pressed', 'false');
@@ -416,7 +416,7 @@ const PENDING_VIEW: HostView = {
 
 /**
  * Attract loop for the gallery cartridge: with no host and a frame too small
- * for any controls, keep Volt running rounds so the miniature is alive. The
+ * for any controls, keep Relay running rounds so the miniature is alive. The
  * jam widget skips metrics inside iframes, so this inflates nothing.
  */
 function startAttractLoop(): void {

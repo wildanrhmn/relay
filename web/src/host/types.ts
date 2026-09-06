@@ -1,4 +1,4 @@
-import type { Build } from '../lib/voltrun';
+import type { Build } from '../lib/relay';
 
 export type RoundView = {
   key: string;

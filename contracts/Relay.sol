@@ -4,7 +4,7 @@ pragma solidity ^0.8.30;
 import {ICasinoGameV2, SessionContext, SessionPhase, StepResult} from "../sdk/solidity/ICasinoGameV2.sol";
 
 /**
- * Volt Run — the player spends a fixed budget of wires across a row of gates.
+ * Relay — the player spends a fixed budget of wires across a row of gates.
  * A gate passes if at least one of its wires survives; the round pays out on how
  * many gates the current cleared before it died.
  *
@@ -14,11 +14,11 @@ import {ICasinoGameV2, SessionContext, SessionPhase, StepResult} from "../sdk/so
  * every legal arrangement returns exactly RTP_WAD — no configuration is better or
  * worse than another, only differently shaped.
  *
- * Mirrored by web/src/lib/voltrun.ts; the two must stay bit-for-bit identical.
+ * Mirrored by web/src/lib/relay.ts; the two must stay bit-for-bit identical.
  */
-contract VoltRunGame is ICasinoGameV2 {
-  error VoltRunGame__InvalidBuild();
-  error VoltRunGame__NoPlayerAction();
+contract RelayGame is ICasinoGameV2 {
+  error RelayGame__InvalidBuild();
+  error RelayGame__NoPlayerAction();
 
   uint256 private constant WAD = 1e18;
   uint256 private constant RTP_WAD = 0.96e18;
@@ -72,7 +72,7 @@ contract VoltRunGame is ICasinoGameV2 {
   }
 
   function onPlayerAction(SessionContext calldata, bytes calldata) external pure returns (StepResult memory) {
-    revert VoltRunGame__NoPlayerAction();
+    revert RelayGame__NoPlayerAction();
   }
 
   function onRandomness(
@@ -107,15 +107,15 @@ contract VoltRunGame is ICasinoGameV2 {
     lanes = abi.decode(gameData, (uint8[]));
 
     uint256 tiers = lanes.length;
-    if (tiers < MIN_TIERS || tiers > MAX_TIERS) revert VoltRunGame__InvalidBuild();
+    if (tiers < MIN_TIERS || tiers > MAX_TIERS) revert RelayGame__InvalidBuild();
 
     uint256 spent = 0;
     for (uint256 i = 0; i < tiers; i++) {
       uint256 k = lanes[i];
-      if (k < 1 || k > MAX_LANES) revert VoltRunGame__InvalidBuild();
+      if (k < 1 || k > MAX_LANES) revert RelayGame__InvalidBuild();
       spent += k;
     }
-    if (spent != WIRE_BUDGET) revert VoltRunGame__InvalidBuild();
+    if (spent != WIRE_BUDGET) revert RelayGame__InvalidBuild();
   }
 
   /// @dev Denominator of C = RTP * LANE_SCALE / laneScaleSum, the per-build normaliser.

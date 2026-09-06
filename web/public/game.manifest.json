@@ -1,11 +1,11 @@
 {
   "schemaVersion": 1,
-  "gameId": "VoltRunGame",
+  "gameId": "RelayGame",
   "apiVersion": 1,
   "defaultLocale": "en",
   "locales": {
     "en": {
-      "name": "Volt Run",
+      "name": "Relay",
       "description": "Spend twelve wires across a row of gates. A gate opens if any of its wires survive, and the round pays on how far the current gets."
     }
   },

@@ -1,4 +1,4 @@
-# Volt Run
+# Relay
 
 A Chain Jam Vol. 1 entry. Spend twelve wires across a row of gates. A gate opens if
 **any** of its wires survive. You are paid for how far the current gets.
@@ -8,9 +8,9 @@ once, then run it — wide and shallow grinds out small wins, thin and deep almo
 dies at the first gate and occasionally pays 605×. Every one of the 1,490 legal builds
 returns exactly the same 96%.
 
-The current is a character. Volt runs the row of doors you built; each door's wires are
+The current is a character. Relay runs the row of doors you built; each door's wires are
 the fuses on its lintel, any live fuse slides the door open, and a door whose fuses all
-blow stays shut — so the gate that stops the run is also the punchline. Volt is drawn
+blow stays shut — so the gate that stops the run is also the punchline. Relay is drawn
 entirely in code, and the round's state machine is what a Rive or sprite version would
 plug into later.
 
@@ -52,11 +52,11 @@ never above, which would under-reserve the house.
 
 | Path | What it is |
 | --- | --- |
-| `contracts/VoltRun.sol` | `ICasinoGameV2` implementation — the canonical copy |
-| `web/src/lib/voltrun.ts` | The same math in TypeScript, mirrored bit-for-bit |
+| `contracts/Relay.sol` | `ICasinoGameV2` implementation — the canonical copy |
+| `web/src/lib/relay.ts` | The same math in TypeScript, mirrored bit-for-bit |
 | `web/src/host/live.ts` | Bridge to the chain.wtf host (no wallet code) |
 | `web/src/host/demo.ts` | Standalone host so the URL is playable on its own |
-| `web/src/game/mascot.ts` | Volt, the current as a character: doors, fuses, the seven beats of a round |
+| `web/src/game/mascot.ts` | Relay, the current as a character: doors, fuses, the seven beats of a round |
 | `web/src/game/` | Build editor, stage contract, synthesised audio |
 | `web/public/game.manifest.json` | Host manifest |
 | `scripts/` | SDK setup, contract sync, compile check |

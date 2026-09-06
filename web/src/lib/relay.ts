@@ -1,8 +1,8 @@
 /**
- * Volt Run — exact game math.
+ * Relay — exact game math.
  *
  * This module is the single source of truth for the paytable and is mirrored
- * line-for-line by contracts/VoltRun.sol. Every quantity is an exact integer:
+ * line-for-line by contracts/Relay.sol. Every quantity is an exact integer:
  * a gate with k lanes passes with probability (2^k - 1) / 2^k, so the whole
  * probability space is rational with denominator 2^WIRE_BUDGET and never needs
  * floating point. TS and Solidity therefore agree bit-for-bit.
