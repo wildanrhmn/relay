@@ -93,6 +93,15 @@ button { touch-action: manipulation; -webkit-tap-highlight-color: transparent; }
 
 .masthead { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
 
+.lockup { display: flex; align-items: center; gap: 9px; min-width: 0; }
+
+.brandmark {
+  flex: 0 0 auto;
+  width: 22px;
+  height: 22px;
+  fill: var(--brass);
+}
+
 .title {
   margin: 0;
   font: italic 800 20px/1 var(--font-display);

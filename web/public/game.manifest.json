@@ -9,6 +9,9 @@
       "description": "Spend twelve wires across a row of gates. A gate opens if any of its wires survive, and the round pays on how far the current gets."
     }
   },
+  "assets": {
+    "iconUrl": "/icon.svg"
+  },
   "presentation": {
     "mode": "full-iframe",
     "hostPanels": {
