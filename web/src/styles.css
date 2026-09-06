@@ -97,9 +97,10 @@ button { touch-action: manipulation; -webkit-tap-highlight-color: transparent; }
 
 .brandmark {
   flex: 0 0 auto;
-  width: 22px;
-  height: 22px;
-  fill: var(--brass);
+  width: 26px;
+  height: 26px;
+  border-radius: 6px;
+  display: block;
 }
 
 .title {
