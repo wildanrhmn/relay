@@ -85,7 +85,9 @@ Either host works; both configs are committed and both keep framing open, which
 matters twice — chain.wtf loads the game in an iframe, and the jam gallery renders a
 live playable preview of it. Never add `X-Frame-Options` here.
 
-**Vercel** — `vercel.json` builds `web/` and publishes `web/dist`:
+**Vercel** — set the project's Root Directory to `web` in Project Settings; `web/vercel.json`
+then runs relative to that (`npm ci`, `npm run build`, publishes `dist`). A `vercel.json` at the
+repo root is ignored once Root Directory points elsewhere — it must live inside that directory:
 
 ```sh
 npx vercel        # preview
