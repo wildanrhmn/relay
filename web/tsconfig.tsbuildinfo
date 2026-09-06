@@ -1,1 +1,0 @@
-{"root":["./src/main.ts","./src/game/build.ts","./src/game/mascot.ts","./src/game/sound.ts","./src/game/stage-api.ts","./src/host/demo.ts","./src/host/live.ts","./src/host/types.ts","./src/lib/relay.solidity.test.ts","./src/lib/relay.test.ts","./src/lib/relay.ts","./src/sdk/bet-limits.ts","./src/sdk/guest.ts","./src/sdk/types.ts"],"version":"5.9.3"}

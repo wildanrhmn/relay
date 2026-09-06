@@ -1,8 +1,9 @@
 node_modules/
 dist/
-sdk/
+/sdk/
 .DS_Store
 *.log
+tsconfig.tsbuildinfo
 
 # stray local captures
 *.png
