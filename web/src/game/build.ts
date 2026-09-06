@@ -5,7 +5,7 @@ import {
   WIRE_BUDGET,
   validateBuild,
   type Build,
-} from '../lib/apparatus';
+} from '../lib/voltrun';
 
 export type Editor = {
   gates: number[];

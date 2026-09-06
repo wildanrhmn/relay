@@ -1,4 +1,4 @@
-# Apparatus
+# Volt Run
 
 A Chain Jam Vol. 1 entry. Spend twelve wires across a row of gates. A gate opens if
 **any** of its wires survive. You are paid for how far the current gets.
@@ -52,8 +52,8 @@ never above, which would under-reserve the house.
 
 | Path | What it is |
 | --- | --- |
-| `contracts/Apparatus.sol` | `ICasinoGameV2` implementation — the canonical copy |
-| `web/src/lib/apparatus.ts` | The same math in TypeScript, mirrored bit-for-bit |
+| `contracts/VoltRun.sol` | `ICasinoGameV2` implementation — the canonical copy |
+| `web/src/lib/voltrun.ts` | The same math in TypeScript, mirrored bit-for-bit |
 | `web/src/host/live.ts` | Bridge to the chain.wtf host (no wallet code) |
 | `web/src/host/demo.ts` | Standalone host so the URL is playable on its own |
 | `web/src/game/mascot.ts` | Volt, the current as a character: doors, fuses, the seven beats of a round |

@@ -1,4 +1,4 @@
-import { WAD, enumerateBuilds, maxMultiplierWad, paytable, realisedRtpWad } from '../src/lib/apparatus';
+import { WAD, enumerateBuilds, maxMultiplierWad, paytable, realisedRtpWad } from '../src/lib/voltrun';
 const n = (w: bigint) => Number(w) / Number(WAD);
 const D = 4096;
 const builds = enumerateBuilds();

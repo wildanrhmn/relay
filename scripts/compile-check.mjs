@@ -5,7 +5,7 @@ import path from 'node:path';
 import { pathToFileURL } from 'node:url';
 
 const root = path.resolve(import.meta.dirname, '..');
-const target = 'contracts/Apparatus.sol';
+const target = 'contracts/VoltRun.sol';
 
 // solc lives in the vendored SDK workspace, not at the repo root.
 const solc = (await import(pathToFileURL(path.join(root, 'sdk/node_modules/solc/index.js')))).default;

@@ -4,5 +4,5 @@
 set -euo pipefail
 root="$(cd "$(dirname "$0")/.." && pwd)"
 sed 's|"../sdk/solidity/ICasinoGameV2.sol"|"../../solidity/ICasinoGameV2.sol"|' \
-  "$root/contracts/Apparatus.sol" > "$root/sdk/simulator/contracts/Apparatus.sol"
-echo "synced -> sdk/simulator/contracts/Apparatus.sol"
+  "$root/contracts/VoltRun.sol" > "$root/sdk/simulator/contracts/VoltRun.sol"
+echo "synced -> sdk/simulator/contracts/VoltRun.sol"

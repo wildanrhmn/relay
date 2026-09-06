@@ -21,7 +21,7 @@ import {
   type Hex,
 } from 'viem';
 import { privateKeyToAccount } from 'viem/accounts';
-import { WAD, multiplierWad, resolveDepth, type Build } from '../src/lib/apparatus';
+import { WAD, multiplierWad, resolveDepth, type Build } from '../src/lib/voltrun';
 
 const REPO = path.resolve(import.meta.dirname, '../..');
 const deployment = JSON.parse(
@@ -35,8 +35,8 @@ const deployment = JSON.parse(
   games: { name: string; address: Address }[];
 };
 
-const game = deployment.games.find((g) => g.name === 'ApparatusGame');
-if (!game) throw new Error('ApparatusGame is not deployed — run scripts/sync-contract.sh and restart the stack');
+const game = deployment.games.find((g) => g.name === 'VoltRunGame');
+if (!game) throw new Error('VoltRunGame is not deployed — run scripts/sync-contract.sh and restart the stack');
 
 const chain = defineChain({
   id: deployment.chainId,

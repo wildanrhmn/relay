@@ -6,7 +6,7 @@
  * the real host with a local balance and browser randomness. It is only ever
  * used when no bridge answers; a live host always wins.
  */
-import { WAD, maxMultiplierWad, multiplierWad, resolveDepth, type Build } from '../lib/apparatus';
+import { WAD, maxMultiplierWad, multiplierWad, resolveDepth, type Build } from '../lib/voltrun';
 import type { GameHost, HostView, RoundView } from './types';
 
 const STARTING_BALANCE = 1_000n * WAD;

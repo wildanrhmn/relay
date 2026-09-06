@@ -2,7 +2,7 @@ import { decodeAbiParameters, encodeAbiParameters } from 'viem';
 import { computeMaxWager } from '../sdk/bet-limits';
 import { connectGameToHost, observeGameContentSize } from '../sdk/guest';
 import type { HostApiV1, HostSnapshotV1 } from '../sdk/types';
-import { WAD, maxMultiplierWad, type Build } from '../lib/apparatus';
+import { WAD, maxMultiplierWad, type Build } from '../lib/voltrun';
 import type { GameHost, HostView, RoundView } from './types';
 
 const BUILD_PARAMS = [{ type: 'uint8[]' }] as const;

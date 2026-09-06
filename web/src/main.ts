@@ -7,7 +7,7 @@ import {
   paytable,
   resolveTrace,
   type Build,
-} from './lib/apparatus';
+} from './lib/voltrun';
 import { PRESETS, addGate, addWire, asBuild, createEditor, isRunnable, pool, removeWire } from './game/build';
 import { Sound } from './game/sound';
 import type { StageEvent, StageLike } from './game/stage-api';
@@ -331,7 +331,7 @@ async function runRound(): Promise<void> {
       verdict('Gate 1 held. Nothing got through.', 'loss');
     }
   } catch (error) {
-    console.error('[apparatus] round failed', error);
+    console.error('[voltrun] round failed', error);
     verdict(shortError(error), 'loss');
     auto = false;
     el('auto').setAttribute('aria-pressed', 'false');
@@ -449,7 +449,7 @@ function startAttractLoop(): void {
 }
 
 function boot(): void {
-  // Paint the apparatus immediately: probing for the host takes up to 1.5s and
+  // Paint the machine immediately: probing for the host takes up to 1.5s and
   // the standalone URL must not open on an empty frame.
   view = PENDING_VIEW;
   wireControls();
